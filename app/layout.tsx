@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Ramabhadra, Arimo, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Preloader } from '@/components/preloader'
 import './globals.css'
 
 const _ramabhadra = Ramabhadra({ 
@@ -50,7 +51,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${_ramabhadra.variable} ${_arimo.variable} ${_geistMono.variable} font-sans antialiased`}>
-        {children}
+        <Preloader>
+          {children}
+        </Preloader>
         <Analytics />
       </body>
     </html>
