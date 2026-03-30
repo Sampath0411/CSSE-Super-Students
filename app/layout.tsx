@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Ramabhadra, Arimo, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { ThemeProvider } from '@/components/theme-provider'
 import { Preloader } from '@/components/preloader'
 import './globals.css'
 
@@ -49,11 +50,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${_ramabhadra.variable} ${_arimo.variable} ${_geistMono.variable} font-sans antialiased`}>
-        <Preloader>
-          {children}
-        </Preloader>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <Preloader>
+            {children}
+          </Preloader>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

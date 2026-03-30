@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { type Teacher } from "@/lib/data";
 
 const navItems = [
@@ -111,6 +112,9 @@ export function AppSidebar() {
           <span className="font-bold text-sidebar-foreground">Admin Portal</span>
         </div>
         <div className="flex items-center gap-2">
+          <div className="lg:hidden">
+            <ThemeToggle />
+          </div>
           <Button
             variant="ghost"
             size="icon"
@@ -215,14 +219,17 @@ export function AppSidebar() {
                 <p className="text-xs text-sidebar-foreground/60 truncate">{admin.department}</p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              onClick={handleLogout}
-              className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                onClick={handleLogout}
+                className="flex-1 justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </aside>

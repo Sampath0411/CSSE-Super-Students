@@ -18,6 +18,7 @@ import {
   Calendar,
   FileSpreadsheet,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { type Student } from "@/lib/data";
 
 const navItems = [
@@ -119,6 +120,7 @@ export default function StudentLayout({
               <p className="font-medium text-sm">{student.name}</p>
               <p className="text-xs opacity-80">Roll: {student.rollNumber}</p>
             </div>
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="sm"
