@@ -9,7 +9,6 @@ import {
   GraduationCap,
   Menu,
   X,
-  QrCode,
   LogOut,
   Home,
   Calendar,
@@ -33,12 +32,6 @@ const navItems = [
     href: "/attendance",
     icon: ClipboardCheck,
     description: "Mark Attendance",
-  },
-  {
-    title: "QR Attendance",
-    href: "/qr-attendance",
-    icon: QrCode,
-    description: "Location-Based QR",
   },
   {
     title: "Face Attendance",

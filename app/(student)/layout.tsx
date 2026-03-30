@@ -9,7 +9,6 @@ import {
   GraduationCap,
   LayoutDashboard,
   ClipboardCheck,
-  Scan,
   User,
   LogOut,
   Menu,
@@ -40,11 +39,6 @@ const navItems = [
     title: "Letters",
     href: "/student/letters",
     icon: FileText,
-  },
-  {
-    title: "Scan QR",
-    href: "/student/scan",
-    icon: Scan,
   },
   {
     title: "Profile",
