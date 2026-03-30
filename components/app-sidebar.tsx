@@ -14,6 +14,7 @@ import {
   Home,
   Calendar,
   ScanFace,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -56,6 +57,12 @@ const navItems = [
     href: "/letters",
     icon: FileText,
     description: "Generate Documents",
+  },
+  {
+    title: "Alerts",
+    href: "/alerts",
+    icon: Bell,
+    description: "Email Notifications",
   },
 ];
 

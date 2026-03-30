@@ -1,4 +1,5 @@
 import { AttendanceRecord, AlertLog } from "./data";
+import { checkAndSendAttendanceAlert } from "./email-service";
 
 // In-memory store for new attendance records (simulating database)
 let newAttendanceRecords: AttendanceRecord[] = [];
@@ -10,6 +11,13 @@ export function addAttendanceRecord(record: Omit<AttendanceRecord, "id">): Atten
     id: `ATT${Date.now()}`,
   };
   newAttendanceRecords.push(newRecord);
+
+  // Check if attendance falls below 75% and send email alert
+  // Use setTimeout to avoid blocking the main thread
+  setTimeout(() => {
+    checkAndSendAttendanceAlert(record.studentId, record.subjectId);
+  }, 100);
+
   return newRecord;
 }
 
