@@ -17,6 +17,8 @@ import {
   Navigation,
   BookOpen,
   Clock,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import {
   getSessionState,
@@ -27,7 +29,7 @@ import {
   isSessionActive,
   SESSION_KEYS,
 } from "@/lib/anti-proxy";
-import { type Student } from "@/lib/data";
+import { type Student, calculateStudentAttendance, ATTENDANCE_THRESHOLD } from "@/lib/data";
 
 interface VerificationStatus {
   otp: "pending" | "success" | "error";
@@ -176,6 +178,26 @@ export default function VerifyAttendancePage() {
     (!sessionFeatures.otp || verificationStatus.otp === "success") &&
     (!sessionFeatures.gps || verificationStatus.gps === "success") &&
     (!sessionFeatures.device || verificationStatus.device === "success");
+
+  // Calculate attendance when all verified
+  const [attendanceData, setAttendanceData] = useState<{
+    percentage: number;
+    total: number;
+    present: number;
+    isEligible: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (allVerified && student) {
+      const data = calculateStudentAttendance(student.id);
+      setAttendanceData({
+        percentage: data.percentage,
+        total: data.total,
+        present: data.present,
+        isEligible: data.percentage >= ATTENDANCE_THRESHOLD,
+      });
+    }
+  }, [allVerified, student]);
 
   if (!student) {
     return (
@@ -415,6 +437,63 @@ export default function VerifyAttendancePage() {
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-700">{successMessage}</AlertDescription>
             </Alert>
+          )}
+
+          {/* Attendance Summary (shown when all verified) */}
+          {allVerified && attendanceData && (
+            <Card className="border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <TrendingUp className="h-5 w-5" />
+                  Your Attendance Summary
+                </CardTitle>
+                <CardDescription>
+                  Current semester attendance statistics
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center p-6 rounded-lg bg-muted/50">
+                  <p className="text-5xl font-bold text-foreground">
+                    {attendanceData.percentage}%
+                  </p>                  <p className="text-sm text-muted-foreground mt-1">Overall Attendance</p>
+                  <div className="mt-3 h-3 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${
+                        attendanceData.isEligible ? "bg-green-500" : "bg-red-500"
+                      }`}
+                      style={{ width: `${attendanceData.percentage}%` }}
+                    />
+                  </div>
+                  <div className="mt-2">
+                    <Badge
+                      variant={attendanceData.isEligible ? "default" : "destructive"}
+                    >
+                      {attendanceData.isEligible ? "Exam Eligible ✓" : "At Risk ⚠"}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 rounded-lg bg-green-50 border border-green-200">
+                    <TrendingUp className="h-6 w-6 text-green-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-green-700">{attendanceData.present}</p>
+                    <p className="text-xs text-green-600">Classes Attended</p>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-red-50 border border-red-200">
+                    <TrendingDown className="h-6 w-6 text-red-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-red-700">
+                      {attendanceData.total - attendanceData.present}
+                    </p>
+                    <p className="text-xs text-red-600">Classes Missed</p>
+                  </div>
+                </div>
+
+                <div className="text-center text-sm text-muted-foreground">
+                  <p>Total Classes: {attendanceData.total}</p>
+                  <p>Minimum Required: {ATTENDANCE_THRESHOLD}%</p>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Final Status */}
