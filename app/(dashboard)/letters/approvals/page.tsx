@@ -87,11 +87,16 @@ export default function LetterApprovalsPage() {
 
   const generateSerialNumber = (letterType: LetterType): string => {
     const year = new Date().getFullYear();
-    const stored = localStorage.getItem(APPROVED_LETTERS_KEY);
-    const approvedLetters = stored ? JSON.parse(stored) : [];
-    const sequence = (approvedLetters.length + 1).toString().padStart(4, "0");
     const typePrefix = letterType.substring(0, 3).toUpperCase();
-    return `AU/CSSE/${typePrefix}/${year}/${sequence}`;
+
+    // Generate random alphanumeric string (6 characters)
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let random = "";
+    for (let i = 0; i < 6; i++) {
+      random += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    return `AU/CSSE/${typePrefix}/${year}/${random}`;
   };
 
   const handleApprove = (request: LetterRequest) => {
