@@ -28,7 +28,7 @@ import {
 import * as tf from "@tensorflow/tfjs";
 import { subjects, students, type Student } from "@/lib/data";
 import { addAttendanceRecord } from "@/lib/attendance-store";
-import { SESSION_KEYS } from "@/lib/anti-proxy";
+import { SESSION_KEYS, generateSessionCode, storeSharedSession } from "@/lib/anti-proxy";
 
 // Model configuration
 const MODEL_URL = "/models/face-detection/model.json";
@@ -75,6 +75,7 @@ export default function FaceAttendancePage() {
   const [otpTimeLeft, setOtpTimeLeft] = useState(90);
   const [teacherLocation, setTeacherLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
+  const [sessionCode, setSessionCode] = useState<string>("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -188,6 +189,10 @@ export default function FaceAttendancePage() {
       return;
     }
 
+    // Generate unique session code for cross-device sync
+    const newSessionCode = generateSessionCode();
+    setSessionCode(newSessionCode);
+
     setSessionActive(true);
     localStorage.setItem(SESSION_KEYS.sessionActive, "true");
     localStorage.setItem(SESSION_KEYS.fingerprints, JSON.stringify({}));
@@ -198,13 +203,38 @@ export default function FaceAttendancePage() {
     localStorage.setItem(SESSION_KEYS.subjectName, subject?.name || "");
     localStorage.setItem(SESSION_KEYS.period, selectedPeriod);
 
+    // Generate OTP if enabled
+    let sessionOtp: string | undefined;
+    let sessionOtpExpiry: number | undefined;
     if (otpEnabled) {
-      generateOTP();
+      const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      sessionOtp = newOtp;
+      sessionOtpExpiry = Date.now() + 90000;
+      setOtp(newOtp);
+      setOtpTimeLeft(90);
+      localStorage.setItem(SESSION_KEYS.otp, newOtp);
+      localStorage.setItem(SESSION_KEYS.otpExpiry, sessionOtpExpiry.toString());
     }
 
-    if (gpsEnabled && !teacherLocation) {
-      captureTeacherLocation();
+    // Capture location if enabled
+    let sessionLocation: { lat: number; lng: number } | undefined;
+    if (gpsEnabled) {
+      if (!teacherLocation) {
+        captureTeacherLocation();
+      }
+      sessionLocation = teacherLocation || undefined;
     }
+
+    // Store shared session for cross-device access
+    storeSharedSession(newSessionCode, {
+      subjectId: selectedSubject,
+      subjectName: subject?.name || "",
+      period: parseInt(selectedPeriod),
+      otp: sessionOtp,
+      otpExpiry: sessionOtpExpiry,
+      teacherLocation: sessionLocation,
+      createdAt: Date.now(),
+    });
   };
 
   // End session
@@ -212,6 +242,7 @@ export default function FaceAttendancePage() {
     setSessionActive(false);
     setOtp("");
     setOtpTimeLeft(0);
+    setSessionCode("");
     // Clear session data
     Object.values(SESSION_KEYS).forEach((key) => localStorage.removeItem(key));
   };
@@ -470,7 +501,22 @@ export default function FaceAttendancePage() {
                   <span className="text-muted-foreground">Period: </span>
                   <span className="font-medium">{selectedPeriod || "-"}</span>
                 </div>
-              </div>            </div>
+              </div>
+            </div>
+          )}
+
+          {/* Session Code Display (when active) */}
+          {sessionActive && sessionCode && (
+            <div className="p-6 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border-2 border-primary/30 text-center">
+              <p className="text-sm text-muted-foreground mb-2">Share this code with students</p>
+              <p className="text-xs text-muted-foreground mb-3">Students must enter this code on their device to join the session</p>
+              <div className="text-5xl font-mono font-bold text-primary tracking-widest bg-white dark:bg-card rounded-lg py-4 shadow-inner">
+                {sessionCode}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Session valid for 8 hours
+              </p>
+            </div>
           )}
 
           {/* Toggle Switches */}

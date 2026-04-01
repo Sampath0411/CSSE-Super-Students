@@ -28,6 +28,8 @@ import {
   registerFingerprint,
   isSessionActive,
   SESSION_KEYS,
+  validateSessionCode,
+  getSharedSession,
 } from "@/lib/anti-proxy";
 import { type Student, calculateStudentAttendance, ATTENDANCE_THRESHOLD } from "@/lib/data";
 
@@ -46,6 +48,7 @@ interface SessionInfo {
 export default function VerifyAttendancePage() {
   const [student, setStudent] = useState<Student | null>(null);
   const [otpInput, setOtpInput] = useState("");
+  const [sessionCodeInput, setSessionCodeInput] = useState("");
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionFeatures, setSessionFeatures] = useState({
     otp: false,
@@ -61,6 +64,7 @@ export default function VerifyAttendancePage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
   const [locationData, setLocationData] = useState<{
     lat: number;
     lng: number;
@@ -98,6 +102,43 @@ export default function VerifyAttendancePage() {
     const interval = setInterval(checkSession, 2000);
     return () => clearInterval(interval);
   }, []);
+
+  // Join session using code
+  const joinSession = async () => {
+    if (!sessionCodeInput || sessionCodeInput.length !== 6) {
+      setErrorMessage("Please enter a valid 6-digit session code");
+      return;
+    }
+
+    setIsJoining(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const result = validateSessionCode(sessionCodeInput);
+
+      if (result.valid && result.session) {
+        setSessionActive(true);
+        setSessionFeatures({
+          otp: !!result.session.otp,
+          gps: !!result.session.teacherLocation,
+          device: true,
+        });
+        setSessionInfo({
+          subjectId: result.session.subjectId,
+          subjectName: result.session.subjectName,
+          period: result.session.period,
+        });
+        setSuccessMessage("Session joined successfully! Complete the verifications below.");
+      } else {
+        setErrorMessage(result.message);
+      }
+    } catch (err) {
+      setErrorMessage("Failed to join session. Please try again.");
+    }
+
+    setIsJoining(false);
+  };
 
   const verifyOTP = () => {
     if (!otpInput || otpInput.length !== 6) {
@@ -222,12 +263,46 @@ export default function VerifyAttendancePage() {
 
       {/* Session Status */}
       {!sessionActive ? (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            No active attendance session. Please ask your teacher to start a session.
-          </AlertDescription>
-        </Alert>
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-800">
+              <Key className="h-5 w-5" />
+              Join Attendance Session
+            </CardTitle>
+            <CardDescription className="text-amber-700">
+              Enter the 6-digit session code from your teacher to join the attendance session
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="000000"
+                value={sessionCodeInput}
+                onChange={(e) => setSessionCodeInput(e.target.value.replace(/\D/g, ""))}
+                className="text-center text-2xl tracking-widest font-mono"
+              />
+              <Button
+                onClick={joinSession}
+                disabled={sessionCodeInput.length !== 6 || isJoining}
+              >
+                {isJoining ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Joining...
+                  </>
+                ) : (
+                  "Join Session"
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-amber-600">
+              Ask your teacher for the session code displayed on their screen
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <Alert className="bg-green-50 border-green-200">
           <CheckCircle2 className="h-4 w-4 text-green-600" />

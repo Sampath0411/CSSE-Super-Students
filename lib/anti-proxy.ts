@@ -22,7 +22,137 @@ export const SESSION_KEYS = {
   teacherLocation: "antiProxy_teacherLocation",
   fingerprints: "antiProxy_fingerprints",
   sessionActive: "antiProxy_sessionActive",
+  sessionCode: "antiProxy_sessionCode",
+  // Shared session data (for cross-device sync)
+  sharedSession: "antiProxy_sharedSession",
 };
+
+// Generate a 6-digit session code
+export function generateSessionCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Store session with code for cross-device access
+export function storeSharedSession(sessionCode: string, sessionData: {
+  subjectId: string;
+  subjectName: string;
+  period: number;
+  otp?: string;
+  otpExpiry?: number;
+  teacherLocation?: { lat: number; lng: number };
+  createdAt: number;
+}): void {
+  if (typeof window === "undefined") return;
+
+  const sharedData = {
+    ...sessionData,
+    sessionCode,
+    active: true,
+  };
+
+  localStorage.setItem(SESSION_KEYS.sharedSession, JSON.stringify(sharedData));
+  localStorage.setItem(SESSION_KEYS.sessionCode, sessionCode);
+}
+
+// Get shared session by code
+export function getSharedSession(): {
+  subjectId: string;
+  subjectName: string;
+  period: number;
+  otp?: string;
+  otpExpiry?: number;
+  teacherLocation?: { lat: number; lng: number };
+  sessionCode: string;
+  createdAt: number;
+  active: boolean;
+} | null {
+  if (typeof window === "undefined") return null;
+
+  const stored = localStorage.getItem(SESSION_KEYS.sharedSession);
+  if (!stored) return null;
+
+  try {
+    const session = JSON.parse(stored);
+    // Check if session is still valid (8 hours)
+    const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours
+    if (Date.now() - session.createdAt > SESSION_DURATION) {
+      localStorage.removeItem(SESSION_KEYS.sharedSession);
+      return null;
+    }
+    return session.active ? session : null;
+  } catch {
+    return null;
+  }
+}
+
+// Validate session code entered by student
+export function validateSessionCode(inputCode: string): {
+  valid: boolean;
+  message: string;
+  session?: {
+    subjectId: string;
+    subjectName: string;
+    period: number;
+    otp?: string;
+    otpExpiry?: number;
+    teacherLocation?: { lat: number; lng: number };
+  };
+} {
+  if (typeof window === "undefined") {
+    return { valid: false, message: "Cannot validate session" };
+  }
+
+  const stored = localStorage.getItem(SESSION_KEYS.sharedSession);
+  if (!stored) {
+    return { valid: false, message: "No active session found. Ask your teacher to start a session first." };
+  }
+
+  try {
+    const session = JSON.parse(stored);
+
+    if (!session.active) {
+      return { valid: false, message: "Session has ended" };
+    }
+
+    if (session.sessionCode !== inputCode) {
+      return { valid: false, message: "Invalid session code. Please check with your teacher." };
+    }
+
+    // Check if session is expired
+    const SESSION_DURATION = 8 * 60 * 60 * 1000;
+    if (Date.now() - session.createdAt > SESSION_DURATION) {
+      localStorage.removeItem(SESSION_KEYS.sharedSession);
+      return { valid: false, message: "Session has expired" };
+    }
+
+    // Copy session data to local storage for this device
+    localStorage.setItem(SESSION_KEYS.sessionActive, "true");
+    localStorage.setItem(SESSION_KEYS.subjectId, session.subjectId);
+    localStorage.setItem(SESSION_KEYS.subjectName, session.subjectName);
+    localStorage.setItem(SESSION_KEYS.period, session.period.toString());
+    if (session.otp) localStorage.setItem(SESSION_KEYS.otp, session.otp);
+    if (session.otpExpiry) localStorage.setItem(SESSION_KEYS.otpExpiry, session.otpExpiry.toString());
+    if (session.teacherLocation) {
+      localStorage.setItem(SESSION_KEYS.teacherLocation, JSON.stringify(session.teacherLocation));
+    }
+    localStorage.setItem(SESSION_KEYS.fingerprints, JSON.stringify({}));
+
+    return {
+      valid: true,
+      message: "Session joined successfully",
+      session: {
+        subjectId: session.subjectId,
+        subjectName: session.subjectName,
+        period: session.period,
+        otp: session.otp,
+        otpExpiry: session.otpExpiry,
+        teacherLocation: session.teacherLocation,
+      }
+    };
+  } catch {
+    return { valid: false, message: "Invalid session data" };
+  }
+}
 
 // Generate device fingerprint using browser characteristics
 export function generateDeviceFingerprint(): string {
