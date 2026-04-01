@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Image from "next/image";
 import { FileText, Send, GraduationCap, Briefcase, CreditCard, AlertCircle, CheckCircle2, Clock } from "lucide-react";
-import { v4 as uuidv4 } from "uuid";
 
 type LetterType = "bonafide" | "study" | "loan" | "internship";
 type RequestStatus = "pending" | "approved" | "rejected";
@@ -119,11 +118,15 @@ export default function StudentLettersPage() {
   };
 
 
+  const generateId = () => {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  };
+
   const handleSubmitRequest = () => {
     if (!student || !selectedLetter) return;
 
     const newRequest: LetterRequest = {
-      id: uuidv4(),
+      id: generateId(),
       studentId: student.id,
       studentName: student.name,
       studentEmail: student.email || "",
