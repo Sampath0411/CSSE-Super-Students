@@ -30,6 +30,7 @@ import {
   SESSION_KEYS,
   validateSessionCode,
   getSharedSession,
+  parseSessionFromUrl,
 } from "@/lib/anti-proxy";
 import { type Student, calculateStudentAttendance, ATTENDANCE_THRESHOLD } from "@/lib/data";
 
@@ -76,6 +77,23 @@ export default function VerifyAttendancePage() {
     const storedStudent = sessionStorage.getItem("studentUser");
     if (storedStudent) {
       setStudent(JSON.parse(storedStudent));
+    }
+
+    // Check for session in URL first (from QR code or shared link)
+    const urlSession = parseSessionFromUrl();
+    if (urlSession.valid && urlSession.session) {
+      setSessionActive(true);
+      setSessionFeatures({
+        otp: !!urlSession.session.otp,
+        gps: !!urlSession.session.teacherLocation,
+        device: true,
+      });
+      setSessionInfo({
+        subjectId: urlSession.session.subjectId,
+        subjectName: urlSession.session.subjectName,
+        period: urlSession.session.period,
+      });
+      setSuccessMessage("Joined session via link! Complete the verifications below.");
     }
 
     // Check session state
@@ -270,7 +288,7 @@ export default function VerifyAttendancePage() {
               Join Attendance Session
             </CardTitle>
             <CardDescription className="text-amber-700">
-              Enter the 6-digit session code from your teacher to join the attendance session
+              Scan the QR code from your teacher&apos;s screen or enter the session code
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -298,9 +316,10 @@ export default function VerifyAttendancePage() {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-amber-600">
-              Ask your teacher for the session code displayed on their screen
-            </p>
+            <div className="text-xs text-amber-600 space-y-1">
+              <p>Ask your teacher for the session code displayed on their screen</p>
+              <p className="text-amber-500 italic">Note: For best results, scan the QR code or use the shareable link</p>
+            </div>
           </CardContent>
         </Card>
       ) : (

@@ -12,6 +12,16 @@ export interface AntiProxySession {
   sessionActive: boolean;
 }
 
+export interface EncodedSessionData {
+  subjectId: string;
+  subjectName: string;
+  period: number;
+  otp?: string;
+  otpExpiry?: number;
+  teacherLocation?: { lat: number; lng: number };
+  createdAt: number;
+}
+
 // Session storage keys
 export const SESSION_KEYS = {
   subjectId: "antiProxy_subjectId",
@@ -369,4 +379,85 @@ export function registerFingerprint(studentId: string): { success: boolean; mess
 export function isSessionActive(): boolean {
   const session = getSessionState();
   return session.sessionActive;
+}
+
+// Encode session data for URL sharing (base64)
+export function encodeSessionData(sessionData: EncodedSessionData): string {
+  try {
+    const json = JSON.stringify(sessionData);
+    return btoa(json);
+  } catch {
+    return "";
+  }
+}
+
+// Decode session data from URL
+export function decodeSessionData(encoded: string): EncodedSessionData | null {
+  try {
+    const json = atob(encoded);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+// Generate a shareable URL with session data
+export function generateShareableUrl(sessionData: EncodedSessionData): string {
+  const encoded = encodeSessionData(sessionData);
+  // Check if we're in browser
+  if (typeof window === "undefined") return "";
+  const baseUrl = window.location.origin;
+  return `${baseUrl}/student/verify-attendance?session=${encoded}`;
+}
+
+// Parse session from URL parameters
+export function parseSessionFromUrl(): {
+  valid: boolean;
+  message: string;
+  session?: EncodedSessionData;
+} {
+  if (typeof window === "undefined") {
+    return { valid: false, message: "Cannot parse session" };
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const encoded = urlParams.get("session");
+
+  if (!encoded) {
+    return { valid: false, message: "No session data found" };
+  }
+
+  const sessionData = decodeSessionData(encoded);
+
+  if (!sessionData) {
+    return { valid: false, message: "Invalid session data" };
+  }
+
+  // Check if session is still valid (8 hours)
+  const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours
+  if (Date.now() - sessionData.createdAt > SESSION_DURATION) {
+    return { valid: false, message: "Session has expired" };
+  }
+
+  // Store the session data locally
+  localStorage.setItem(SESSION_KEYS.sessionActive, "true");
+  localStorage.setItem(SESSION_KEYS.subjectId, sessionData.subjectId);
+  localStorage.setItem(SESSION_KEYS.subjectName, sessionData.subjectName);
+  localStorage.setItem(SESSION_KEYS.period, sessionData.period.toString());
+  if (sessionData.otp) {
+    localStorage.setItem(SESSION_KEYS.otp, sessionData.otp);
+  }
+  if (sessionData.otpExpiry) {
+    localStorage.setItem(SESSION_KEYS.otpExpiry, sessionData.otpExpiry.toString());
+  }
+  if (sessionData.teacherLocation) {
+    localStorage.setItem(SESSION_KEYS.teacherLocation, JSON.stringify(sessionData.teacherLocation));
+  }
+  localStorage.setItem(SESSION_KEYS.fingerprints, JSON.stringify({}));
+
+  return {
+    valid: true,
+    message: "Session loaded successfully",
+    session: sessionData,
+  };
 }

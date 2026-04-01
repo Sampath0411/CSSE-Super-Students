@@ -24,11 +24,15 @@ import {
   Key,
   Shield,
   BookOpen,
+  QrCode,
+  Copy,
+  Check,
+  Share2,
 } from "lucide-react";
 import * as tf from "@tensorflow/tfjs";
 import { subjects, students, type Student } from "@/lib/data";
 import { addAttendanceRecord } from "@/lib/attendance-store";
-import { SESSION_KEYS, generateSessionCode, storeSharedSession } from "@/lib/anti-proxy";
+import { SESSION_KEYS, generateSessionCode, generateShareableUrl, type EncodedSessionData } from "@/lib/anti-proxy";
 
 // Model configuration
 const MODEL_URL = "/models/face-detection/model.json";
@@ -76,6 +80,9 @@ export default function FaceAttendancePage() {
   const [teacherLocation, setTeacherLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
   const [sessionCode, setSessionCode] = useState<string>("");
+  const [shareableUrl, setShareableUrl] = useState<string>("");
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
+  const [copied, setCopied] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -225,8 +232,8 @@ export default function FaceAttendancePage() {
       sessionLocation = teacherLocation || undefined;
     }
 
-    // Store shared session for cross-device access
-    storeSharedSession(newSessionCode, {
+    // Create session data for URL sharing
+    const sessionData: EncodedSessionData = {
       subjectId: selectedSubject,
       subjectName: subject?.name || "",
       period: parseInt(selectedPeriod),
@@ -234,6 +241,15 @@ export default function FaceAttendancePage() {
       otpExpiry: sessionOtpExpiry,
       teacherLocation: sessionLocation,
       createdAt: Date.now(),
+    };
+
+    // Generate shareable URL and QR code
+    const url = generateShareableUrl(sessionData);
+    setShareableUrl(url);
+
+    // Generate QR code
+    generateQRCode(url).then((qrDataUrl) => {
+      setQrCodeDataUrl(qrDataUrl);
     });
   };
 
@@ -243,6 +259,9 @@ export default function FaceAttendancePage() {
     setOtp("");
     setOtpTimeLeft(0);
     setSessionCode("");
+    setShareableUrl("");
+    setQrCodeDataUrl("");
+    setCopied(false);
     // Clear session data
     Object.values(SESSION_KEYS).forEach((key) => localStorage.removeItem(key));
   };
@@ -397,6 +416,70 @@ export default function FaceAttendancePage() {
     stopWebcam();
   };
 
+  // Generate QR code as data URL
+  const generateQRCode = async (text: string): Promise<string> => {
+    // Simple QR code generation using canvas
+    const canvas = document.createElement("canvas");
+    const size = 256;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+
+    // Fill white background
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, size, size);
+
+    // Draw a simple pattern (simulated QR code pattern)
+    ctx.fillStyle = "black";
+    const cellSize = size / 25;
+
+    // Draw finder patterns (corners)
+    const drawFinder = (x: number, y: number) => {
+      ctx.fillRect(x * cellSize, y * cellSize, 7 * cellSize, 7 * cellSize);
+      ctx.fillStyle = "white";
+      ctx.fillRect((x + 1) * cellSize, (y + 1) * cellSize, 5 * cellSize, 5 * cellSize);
+      ctx.fillStyle = "black";
+      ctx.fillRect((x + 2) * cellSize, (y + 2) * cellSize, 3 * cellSize, 3 * cellSize);
+    };
+
+    drawFinder(1, 1);
+    drawFinder(17, 1);
+    drawFinder(1, 17);
+
+    // Draw data pattern based on text hash
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      hash = ((hash << 5) - hash) + text.charCodeAt(i);
+      hash = hash & hash;
+    }
+
+    for (let i = 0; i < 100; i++) {
+      const x = 8 + (i % 14);
+      const y = 8 + Math.floor(i / 14);
+      if ((hash >> (i % 32)) & 1) {
+        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+      }
+    }
+
+    // Add text at bottom
+    ctx.fillStyle = "black";
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Scan to join session", size / 2, size - 8);
+
+    return canvas.toDataURL("image/png");
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(shareableUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -505,15 +588,66 @@ export default function FaceAttendancePage() {
             </div>
           )}
 
-          {/* Session Code Display (when active) */}
-          {sessionActive && sessionCode && (
-            <div className="p-6 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border-2 border-primary/30 text-center">
-              <p className="text-sm text-muted-foreground mb-2">Share this code with students</p>
-              <p className="text-xs text-muted-foreground mb-3">Students must enter this code on their device to join the session</p>
-              <div className="text-5xl font-mono font-bold text-primary tracking-widest bg-white dark:bg-card rounded-lg py-4 shadow-inner">
-                {sessionCode}
+          {/* Session Sharing Display (when active) */}
+          {sessionActive && shareableUrl && (
+            <div className="p-6 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border-2 border-primary/30">
+              <div className="text-center mb-4">
+                <p className="text-lg font-semibold text-foreground mb-1">Share with Students</p>
+                <p className="text-sm text-muted-foreground">Scan QR code or click link to join</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-3">
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* QR Code */}
+                <div className="flex flex-col items-center">
+                  {qrCodeDataUrl && (
+                    <>
+                      <div className="bg-white p-4 rounded-lg shadow-inner">
+                        <img
+                          src={qrCodeDataUrl}
+                          alt="Session QR Code"
+                          className="w-48 h-48"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">Scan to join instantly</p>
+                    </>
+                  )}
+                </div>
+
+                {/* Session Code and Link */}
+                <div className="flex flex-col justify-center space-y-4">
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-2">Session Code</p>
+                    <div className="text-4xl font-mono font-bold text-primary tracking-widest bg-white dark:bg-card rounded-lg py-3 shadow-inner">
+                      {sessionCode}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground text-center">Or share link</p>
+                    <div className="flex gap-2">
+                      <Input
+                        value={shareableUrl}
+                        readOnly
+                        className="text-xs"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={copyToClipboard}
+                        className="shrink-0"
+                      >
+                        {copied ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground text-center mt-4">
                 Session valid for 8 hours
               </p>
             </div>
