@@ -8,13 +8,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
   Key,
-  MapPin,
-  Smartphone,
   CheckCircle2,
   XCircle,
   Loader2,
   AlertTriangle,
-  Navigation,
   BookOpen,
   Clock,
   TrendingUp,
@@ -23,20 +20,11 @@ import {
 import {
   getSessionState,
   validateOTP,
-  getStudentLocation,
-  validateLocation,
-  registerFingerprint,
   isSessionActive,
   SESSION_KEYS,
 } from "@/lib/anti-proxy";
 import { getSessionFromSupabase, type SessionRecord } from "@/lib/supabase";
 import { type Student, calculateStudentAttendance, ATTENDANCE_THRESHOLD } from "@/lib/data";
-
-interface VerificationStatus {
-  otp: "pending" | "success" | "error";
-  gps: "pending" | "success" | "error";
-  device: "pending" | "success" | "error";
-}
 
 interface SessionInfo {
   subjectId?: string;
@@ -49,27 +37,11 @@ export default function VerifyAttendancePage() {
   const [otpInput, setOtpInput] = useState("");
   const [sessionCodeInput, setSessionCodeInput] = useState("");
   const [sessionActive, setSessionActive] = useState(false);
-  const [sessionFeatures, setSessionFeatures] = useState({
-    otp: false,
-    gps: false,
-    device: false,
-  });
   const [sessionInfo, setSessionInfo] = useState<SessionInfo>({});
-  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>({
-    otp: "pending",
-    gps: "pending",
-    device: "pending",
-  });
+  const [otpVerified, setOtpVerified] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
-  const [locationData, setLocationData] = useState<{
-    lat: number;
-    lng: number;
-    accuracy: number;
-  } | null>(null);
-  const [distance, setDistance] = useState<number | null>(null);
 
   useEffect(() => {
     const storedStudent = sessionStorage.getItem("studentUser");
@@ -77,16 +49,16 @@ export default function VerifyAttendancePage() {
       setStudent(JSON.parse(storedStudent));
     }
 
-    // Check for session code in URL (from QR code scan)
+    // Check for OTP in URL (from teacher's shared code)
     const checkUrlSession = async () => {
       if (typeof window === "undefined") return;
       const urlParams = new URLSearchParams(window.location.search);
-      const codeFromUrl = urlParams.get("code");
+      const otpFromUrl = urlParams.get("code");
 
-      if (codeFromUrl) {
-        setSessionCodeInput(codeFromUrl);
-        // Auto-join session from URL
-        await joinSessionWithCode(codeFromUrl);
+      if (otpFromUrl) {
+        setSessionCodeInput(otpFromUrl);
+        // Auto-join session from URL using OTP
+        await joinSessionWithCode(otpFromUrl);
       }
     };
 
@@ -99,11 +71,6 @@ export default function VerifyAttendancePage() {
 
       if (active) {
         const session = getSessionState();
-        setSessionFeatures({
-          otp: !!session.otp,
-          gps: !!session.teacherLocation,
-          device: true,
-        });
         setSessionInfo({
           subjectId: session.subjectId,
           subjectName: session.subjectName,
@@ -117,7 +84,7 @@ export default function VerifyAttendancePage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Join session using code (from Supabase)
+  // Join session using OTP (from Supabase)
   const joinSessionWithCode = async (code: string) => {
     setIsJoining(true);
     setErrorMessage("");
@@ -140,17 +107,8 @@ export default function VerifyAttendancePage() {
         if (session.otp_expiry) {
           localStorage.setItem(SESSION_KEYS.otpExpiry, session.otp_expiry.toString());
         }
-        if (session.teacher_location) {
-          localStorage.setItem(SESSION_KEYS.teacherLocation, JSON.stringify(session.teacher_location));
-        }
-        localStorage.setItem(SESSION_KEYS.fingerprints, JSON.stringify({}));
 
         setSessionActive(true);
-        setSessionFeatures({
-          otp: !!session.otp,
-          gps: !!session.teacher_location,
-          device: true,
-        });
         setSessionInfo({
           subjectId: session.subject_id,
           subjectName: session.subject_name,
@@ -179,82 +137,18 @@ export default function VerifyAttendancePage() {
   const verifyOTP = () => {
     if (!otpInput || otpInput.length !== 6) {
       setErrorMessage("Please enter a 6-digit OTP");
-      setVerificationStatus((prev) => ({ ...prev, otp: "error" }));
       return;
     }
 
     const result = validateOTP(otpInput);
     if (result.valid) {
-      setVerificationStatus((prev) => ({ ...prev, otp: "success" }));
+      setOtpVerified(true);
       setErrorMessage("");
     } else {
       setErrorMessage(result.message);
-      setVerificationStatus((prev) => ({ ...prev, otp: "error" }));
+      setOtpVerified(false);
     }
   };
-
-  const verifyLocation = async () => {
-    setIsVerifying(true);
-    setErrorMessage("");
-
-    try {
-      const studentLoc = await getStudentLocation();
-      setLocationData(studentLoc);
-
-      const session = getSessionState();
-      if (!session.teacherLocation) {
-        setErrorMessage("Teacher location not set");
-        setVerificationStatus((prev) => ({ ...prev, gps: "error" }));
-        setIsVerifying(false);
-        return;
-      }
-
-      const validation = validateLocation(
-        studentLoc.lat,
-        studentLoc.lng,
-        session.teacherLocation.lat,
-        session.teacherLocation.lng,
-        10
-      );
-
-      setDistance(validation.distance);
-
-      if (validation.valid) {
-        setVerificationStatus((prev) => ({ ...prev, gps: "success" }));
-        setSuccessMessage(validation.message);
-      } else {
-        setErrorMessage(validation.message);
-        setVerificationStatus((prev) => ({ ...prev, gps: "error" }));
-      }
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Location verification failed");
-      setVerificationStatus((prev) => ({ ...prev, gps: "error" }));
-    }
-
-    setIsVerifying(false);
-  };
-
-  const verifyDevice = () => {
-    if (!student) {
-      setErrorMessage("Student not authenticated");
-      setVerificationStatus((prev) => ({ ...prev, device: "error" }));
-      return;
-    }
-
-    const result = registerFingerprint(student.id);
-    if (result.success) {
-      setVerificationStatus((prev) => ({ ...prev, device: "success" }));
-      setSuccessMessage(result.message);
-    } else {
-      setErrorMessage(result.message);
-      setVerificationStatus((prev) => ({ ...prev, device: "error" }));
-    }
-  };
-
-  const allVerified =
-    (!sessionFeatures.otp || verificationStatus.otp === "success") &&
-    (!sessionFeatures.gps || verificationStatus.gps === "success") &&
-    (!sessionFeatures.device || verificationStatus.device === "success");
 
   // Calculate attendance when all verified
   const [attendanceData, setAttendanceData] = useState<{
@@ -306,7 +200,7 @@ export default function VerifyAttendancePage() {
               Join Attendance Session
             </CardTitle>
             <CardDescription className="text-amber-700">
-              Scan the QR code from your teacher&apos;s screen or enter the session code
+              Enter the 6-digit OTP from your teacher to join the attendance session
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -334,9 +228,8 @@ export default function VerifyAttendancePage() {
                 )}
               </Button>
             </div>
-            <div className="text-xs text-amber-600 space-y-1">
-              <p>Ask your teacher for the session code displayed on their screen</p>
-              <p className="text-amber-500 italic">Note: For best results, scan the QR code or use the shareable link</p>
+            <div className="text-xs text-amber-600">
+              <p>Ask your teacher for the 6-digit OTP displayed on their screen</p>
             </div>
           </CardContent>
         </Card>
@@ -379,162 +272,50 @@ export default function VerifyAttendancePage() {
           )}
 
           {/* OTP Verification */}
-          {sessionFeatures.otp && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Key className="h-5 w-5" />
-                  OTP Verification
-                  <StatusBadge status={verificationStatus.otp} />
-                </CardTitle>
-                <CardDescription>
-                  Enter the 6-digit OTP displayed on your teacher&apos;s screen
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="000000"
-                    value={otpInput}
-                    onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
-                    disabled={verificationStatus.otp === "success"}
-                    className="text-center text-2xl tracking-widest font-mono"
-                  />
-                  <Button
-                    onClick={verifyOTP}
-                    disabled={otpInput.length !== 6 || verificationStatus.otp === "success"}
-                  >
-                    {verificationStatus.otp === "success" ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      "Verify"
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  OTP expires in 90 seconds. Ask your teacher to regenerate if expired.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* GPS Verification */}
-          {sessionFeatures.gps && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <MapPin className="h-5 w-5" />
-                  Location Verification
-                  <StatusBadge status={verificationStatus.gps} />
-                </CardTitle>
-                <CardDescription>
-                  Your location will be verified against the classroom location
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {locationData ? (
-                  <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Navigation className="h-4 w-4 text-primary" />
-                      <span className="font-medium">Your Location</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Lat: {locationData.lat.toFixed(6)}, Lng: {locationData.lng.toFixed(6)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Accuracy: ±{Math.round(locationData.accuracy)}m
-                    </p>
-                    {distance !== null && (
-                      <p
-                        className={`text-sm font-medium ${
-                          distance <= 10 ? "text-green-600" : "text-red-600"
-                        }`}
-                      >
-                        Distance from classroom: {Math.round(distance)}m
-                        {distance > 10 && " (Max allowed: 10m)"}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground">
-                    <MapPin className="h-12 w-12 mx-auto mb-2 opacity-20" />
-                    <p>Click verify to capture your location</p>
-                  </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Key className="h-5 w-5" />
+                OTP Verification
+                {otpVerified && (
+                  <Badge variant="default" className="bg-green-600">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Verified
+                  </Badge>
                 )}
+              </CardTitle>
+              <CardDescription>
+                Enter the 6-digit OTP displayed on your teacher&apos;s screen
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={otpInput}
+                  onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
+                  disabled={otpVerified}
+                  className="text-center text-2xl tracking-widest font-mono"
+                />
                 <Button
-                  onClick={verifyLocation}
-                  disabled={isVerifying || verificationStatus.gps === "success"}
-                  className="w-full"
+                  onClick={verifyOTP}
+                  disabled={otpInput.length !== 6 || otpVerified}
                 >
-                  {isVerifying ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Getting Location...
-                    </>
-                  ) : verificationStatus.gps === "success" ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Location Verified
-                    </>
+                  {otpVerified ? (
+                    <CheckCircle2 className="h-4 w-4" />
                   ) : (
-                    <>
-                      <Navigation className="h-4 w-4 mr-2" />
-                      Verify Location
-                    </>
+                    "Verify"
                   )}
                 </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Device Verification */}
-          {sessionFeatures.device && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Smartphone className="h-5 w-5" />
-                  Device Verification
-                  <StatusBadge status={verificationStatus.device} />
-                </CardTitle>
-                <CardDescription>
-                  Prevents proxy attendance and multiple students using the same device
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Your device will be fingerprinted using browser characteristics.
-                    This prevents:
-                  </p>
-                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
-                    <li>Someone else marking attendance for you</li>
-                    <li>Multiple students using the same device</li>
-                    <li>Device switching during the session</li>
-                  </ul>
-                </div>
-                <Button
-                  onClick={verifyDevice}
-                  disabled={verificationStatus.device === "success"}
-                  className="w-full"
-                >
-                  {verificationStatus.device === "success" ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Device Registered
-                    </>
-                  ) : (
-                    <>
-                      <Smartphone className="h-4 w-4 mr-2" />
-                      Register This Device
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                OTP expires in 90 seconds. Ask your teacher to regenerate if expired.
+              </p>
+            </CardContent>
+          </Card>
 
           {/* Error/Success Messages */}
           {errorMessage && (
@@ -609,14 +390,14 @@ export default function VerifyAttendancePage() {
           )}
 
           {/* Final Status */}
-          <Card className={allVerified ? "border-green-500 border-2" : ""}>
+          <Card className={otpVerified ? "border-green-500 border-2" : ""}>
             <CardContent className="pt-6">
               <div className="text-center">
-                {allVerified ? (
+                {otpVerified ? (
                   <>
                     <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
                     <h3 className="text-xl font-bold text-green-800 mb-2">
-                      All Verifications Complete!
+                      OTP Verified!
                     </h3>
                     <p className="text-green-600 mb-4">
                       You can now proceed with face recognition attendance
@@ -629,10 +410,10 @@ export default function VerifyAttendancePage() {
                   <>
                     <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-amber-800 mb-2">
-                      Complete All Verifications
+                      Complete OTP Verification
                     </h3>
                     <p className="text-amber-600">
-                      Finish the required checks above to proceed
+                      Enter the 6-digit OTP from your teacher to proceed
                     </p>
                   </>
                 )}
@@ -665,6 +446,10 @@ function StatusBadge({ status }: { status: "pending" | "success" | "error" }) {
   return (
     <Badge variant="outline">
       <Loader2 className="h-3 w-3 mr-1" />
+      Pending
+    </Badge>
+  );
+}>
       Pending
     </Badge>
   );

@@ -15,26 +15,18 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Users,
   AlertTriangle,
   RefreshCw,
   Clock,
-  MapPin,
-  Smartphone,
   Key,
   Shield,
   BookOpen,
-  QrCode,
-  Copy,
-  Check,
-  Share2,
 } from "lucide-react";
 import * as tf from "@tensorflow/tfjs";
 import { subjects, students, type Student } from "@/lib/data";
 import { addAttendanceRecord } from "@/lib/attendance-store";
-import { SESSION_KEYS, generateSessionCode } from "@/lib/anti-proxy";
+import { SESSION_KEYS } from "@/lib/anti-proxy";
 import { storeSessionInSupabase, endSessionInSupabase, type SessionRecord } from "@/lib/supabase";
-import { QRCodeSVG } from "qrcode.react";
 
 // Model configuration
 const MODEL_URL = "/models/face-detection/model.json";
@@ -72,18 +64,10 @@ export default function FaceAttendancePage() {
   const [error, setError] = useState<string>("");
   const [prediction, setPrediction] = useState<string>("");
 
-  // Anti-proxy feature states
+  // Anti-proxy feature states - OTP only
   const [sessionActive, setSessionActive] = useState(false);
-  const [otpEnabled, setOtpEnabled] = useState(false);
-  const [gpsEnabled, setGpsEnabled] = useState(false);
-  const [deviceLockEnabled, setDeviceLockEnabled] = useState(false);
   const [otp, setOtp] = useState<string>("");
   const [otpTimeLeft, setOtpTimeLeft] = useState(90);
-  const [teacherLocation, setTeacherLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [isCapturingLocation, setIsCapturingLocation] = useState(false);
-  const [sessionCode, setSessionCode] = useState<string>("");
-  const [studentUrl, setStudentUrl] = useState<string>("");
-  const [copied, setCopied] = useState(false);
   const [isStoringSession, setIsStoringSession] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -148,50 +132,7 @@ export default function FaceAttendancePage() {
     localStorage.setItem(SESSION_KEYS.otpExpiry, expiry.toString());
   };
 
-  // Capture teacher location
-  const captureTeacherLocation = () => {
-    setIsCapturingLocation(true);
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser");
-      setIsCapturingLocation(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        setTeacherLocation(location);
-        localStorage.setItem(SESSION_KEYS.teacherLocation, JSON.stringify(location));
-        setIsCapturingLocation(false);
-      },
-      (err) => {
-        let errorMsg = "Unable to retrieve location";
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            errorMsg = "Location permission denied";
-            break;
-          case err.POSITION_UNAVAILABLE:
-            errorMsg = "Location information unavailable";
-            break;
-          case err.TIMEOUT:
-            errorMsg = "Location request timed out";
-            break;
-        }
-        setError(errorMsg);
-        setIsCapturingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 10000,
-      }
-    );
-  };
-
-  // Start session
+  // Start session - OTP only
   const startSession = async () => {
     if (!selectedSubject || !selectedPeriod) {
       setError("Please select subject and period first");
@@ -200,13 +141,8 @@ export default function FaceAttendancePage() {
 
     setIsStoringSession(true);
 
-    // Generate unique session code for cross-device sync
-    const newSessionCode = generateSessionCode();
-    setSessionCode(newSessionCode);
-
     setSessionActive(true);
     localStorage.setItem(SESSION_KEYS.sessionActive, "true");
-    localStorage.setItem(SESSION_KEYS.fingerprints, JSON.stringify({}));
 
     // Store subject and period info locally
     const subject = subjects.find(s => s.id === selectedSubject);
@@ -214,45 +150,22 @@ export default function FaceAttendancePage() {
     localStorage.setItem(SESSION_KEYS.subjectName, subject?.name || "");
     localStorage.setItem(SESSION_KEYS.period, selectedPeriod);
 
-    // Generate OTP if enabled
-    let sessionOtp: string | undefined;
-    let sessionOtpExpiry: number | undefined;
-    if (otpEnabled) {
-      const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      sessionOtp = newOtp;
-      sessionOtpExpiry = Date.now() + 90000;
-      setOtp(newOtp);
-      setOtpTimeLeft(90);
-      localStorage.setItem(SESSION_KEYS.otp, newOtp);
-      localStorage.setItem(SESSION_KEYS.otpExpiry, sessionOtpExpiry.toString());
-    }
-
-    // Capture location if enabled
-    let sessionLocation: { lat: number; lng: number } | undefined;
-    if (gpsEnabled) {
-      if (!teacherLocation) {
-        await new Promise((resolve) => {
-          captureTeacherLocation();
-          setTimeout(resolve, 2000); // Wait for location
-        });
-      }
-      sessionLocation = teacherLocation || undefined;
-    }
-
-    // Create student URL with session code
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    const studentLink = `${baseUrl}/student/verify-attendance?code=${newSessionCode}`;
-    setStudentUrl(studentLink);
+    // Generate OTP
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = Date.now() + 90000;
+    setOtp(newOtp);
+    setOtpTimeLeft(90);
+    localStorage.setItem(SESSION_KEYS.otp, newOtp);
+    localStorage.setItem(SESSION_KEYS.otpExpiry, otpExpiry.toString());
 
     // Store session in Supabase for cross-device access
     const sessionData: SessionRecord = {
-      session_code: newSessionCode,
+      session_code: newOtp, // Use OTP as session code
       subject_id: selectedSubject,
       subject_name: subject?.name || "",
       period: parseInt(selectedPeriod),
-      otp: sessionOtp,
-      otp_expiry: sessionOtpExpiry,
-      teacher_location: sessionLocation,
+      otp: newOtp,
+      otp_expiry: otpExpiry,
       active: true,
     };
 
@@ -267,17 +180,14 @@ export default function FaceAttendancePage() {
 
   // End session
   const endSession = async () => {
-    // End session in Supabase
-    if (sessionCode) {
-      await endSessionInSupabase(sessionCode);
+    // End session in Supabase using OTP as session code
+    if (otp) {
+      await endSessionInSupabase(otp);
     }
 
     setSessionActive(false);
     setOtp("");
     setOtpTimeLeft(0);
-    setSessionCode("");
-    setStudentUrl("");
-    setCopied(false);
     // Clear session data
     Object.values(SESSION_KEYS).forEach((key) => localStorage.removeItem(key));
   };
@@ -432,16 +342,6 @@ export default function FaceAttendancePage() {
     stopWebcam();
   };
 
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(studentUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -471,11 +371,7 @@ export default function FaceAttendancePage() {
         <Alert className="bg-green-50 border-green-200">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-700">
-            Session active! Anti-proxy features enabled: {[
-              otpEnabled && "OTP",
-              gpsEnabled && "GPS",
-              deviceLockEnabled && "Device Lock"
-            ].filter(Boolean).join(", ") || "None"}
+            Session active! OTP verification enabled
           </AlertDescription>
         </Alert>
       )}
@@ -550,121 +446,8 @@ export default function FaceAttendancePage() {
             </div>
           )}
 
-          {/* Session Sharing Display (when active) */}
-          {sessionActive && studentUrl && (
-            <div className="p-6 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border-2 border-primary/30">
-              <div className="text-center mb-4">
-                <p className="text-lg font-semibold text-foreground mb-1">Share with Students</p>
-                <p className="text-sm text-muted-foreground">Scan QR code to join instantly</p>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* QR Code */}
-                <div className="flex flex-col items-center">
-                  <div className="bg-white p-4 rounded-lg shadow-inner">
-                    <QRCodeSVG
-                      value={studentUrl}
-                      size={192}
-                      level="H"
-                      includeMargin={true}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">Scan with camera to join</p>
-                </div>
-
-                {/* Session Code and Link */}
-                <div className="flex flex-col justify-center space-y-4">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-2">Session Code</p>
-                    <div className="text-4xl font-mono font-bold text-primary tracking-widest bg-white dark:bg-card rounded-lg py-3 shadow-inner">
-                      {sessionCode}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground text-center">Or share link</p>
-                    <div className="flex gap-2">
-                      <Input
-                        value={studentUrl}
-                        readOnly
-                        className="text-xs"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={copyToClipboard}
-                        className="shrink-0"
-                      >
-                        {copied ? (
-                          <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-xs text-muted-foreground text-center mt-4">
-                Session valid for 8 hours
-              </p>
-            </div>
-          )}
-
-          {/* Toggle Switches */}
-          <div className="grid md:grid-cols-3 gap-4">
-            {/* OTP Toggle */}
-            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-3">
-                <Key className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium">OTP Verification</p>
-                  <p className="text-xs text-muted-foreground">6-digit code, 90s expiry</p>
-                </div>
-              </div>
-              <Switch
-                checked={otpEnabled}
-                onCheckedChange={setOtpEnabled}
-                disabled={sessionActive}
-              />
-            </div>
-
-            {/* GPS Toggle */}
-            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium">GPS Location</p>
-                  <p className="text-xs text-muted-foreground">10m radius check</p>
-                </div>
-              </div>
-              <Switch
-                checked={gpsEnabled}
-                onCheckedChange={setGpsEnabled}
-                disabled={sessionActive}
-              />
-            </div>
-
-            {/* Device Lock Toggle */}
-            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-3">
-                <Smartphone className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium">Device Lock</p>
-                  <p className="text-xs text-muted-foreground">Prevent proxy attendance</p>
-                </div>
-              </div>
-              <Switch
-                checked={deviceLockEnabled}
-                onCheckedChange={setDeviceLockEnabled}
-                disabled={sessionActive}
-              />
-            </div>
-          </div>
-
-          {/* OTP Display */}
-          {otpEnabled && sessionActive && (
+          {/* OTP Display - Always show when session active */}
+          {sessionActive && (
             <div className="p-6 bg-primary/5 rounded-lg border-2 border-primary/20 text-center">
               <p className="text-sm text-muted-foreground mb-2">Current OTP (expires in {otpTimeLeft}s)</p>
               <div className="text-5xl font-mono font-bold text-primary tracking-widest">
@@ -681,32 +464,11 @@ export default function FaceAttendancePage() {
                   Regenerate OTP
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground mt-4">
+                Share this 6-digit code with students to join the session
+              </p>
             </div>
           )}
-
-          {/* GPS Status */}
-          {gpsEnabled && (
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="font-medium">Classroom Location</p>
-                    {teacherLocation ? (
-                      <p className="text-xs text-muted-foreground">
-                        Lat: {teacherLocation.lat.toFixed(6)}, Lng: {teacherLocation.lng.toFixed(6)}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Not set</p>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={captureTeacherLocation}
-                  disabled={isCapturingLocation || sessionActive}
-                >
                   {isCapturingLocation ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
@@ -724,7 +486,7 @@ export default function FaceAttendancePage() {
               <Button
                 size="lg"
                 onClick={startSession}
-                disabled={(gpsEnabled && !teacherLocation) || isStoringSession}
+                disabled={isStoringSession}
               >
                 {isStoringSession ? (
                   <>
@@ -745,12 +507,6 @@ export default function FaceAttendancePage() {
               </Button>
             )}
           </div>
-
-          {gpsEnabled && !teacherLocation && !sessionActive && (
-            <p className="text-xs text-center text-amber-600">
-              Please capture classroom location before starting session
-            </p>
-          )}
         </CardContent>
       </Card>
 
