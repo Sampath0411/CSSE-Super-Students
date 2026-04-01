@@ -23,6 +23,7 @@ import { getUnreadNotificationCount } from "@/lib/notifications";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { type Student } from "@/lib/data";
 import Image from "next/image";
+import { SessionProvider } from "@/components/session-provider";
 
 const navItems = [
   {
@@ -113,6 +114,7 @@ export default function StudentLayout({
   }
 
   return (
+    <SessionProvider userType="student" storageKey="studentUser">
     <div className="min-h-screen bg-background">
       {/* Top Header */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-primary text-primary-foreground z-50 shadow-md">
@@ -255,5 +257,6 @@ export default function StudentLayout({
         {children}
       </main>
     </div>
+    </SessionProvider>
   );
 }

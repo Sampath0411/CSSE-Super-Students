@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, BookOpen, MapPin, Bell } from "lucide-react";
+import { Calendar, Clock, BookOpen, MapPin, Bell, AlertCircle, Users, XCircle } from "lucide-react";
 import { timetable, subjects, teachers, timeSlots, type Student } from "@/lib/data";
+import { getEffectiveTimetable, getModifications, type TimetableModification } from "@/lib/timetable-store";
 
 const days = [
   { id: "MON", label: "Monday" },
@@ -23,6 +24,8 @@ const typeColors: Record<string, string> = {
   "ncc/nss": "bg-green-100 text-green-800 border-green-200",
   "self-study": "bg-yellow-100 text-yellow-800 border-yellow-200",
   remedial: "bg-orange-100 text-orange-800 border-orange-200",
+  cancelled: "bg-red-100 text-red-800 border-red-200",
+  substitute: "bg-amber-100 text-amber-800 border-amber-200",
 };
 
 const typeLabels: Record<string, string> = {
@@ -32,11 +35,15 @@ const typeLabels: Record<string, string> = {
   "ncc/nss": "NCC/NSS",
   "self-study": "Self Study",
   remedial: "Remedial",
+  cancelled: "Cancelled",
+  substitute: "Substitute",
 };
 
 export default function StudentTimetablePage() {
   const [student, setStudent] = useState<Student | null>(null);
   const [today, setToday] = useState("")
+  const [effectiveTimetable, setEffectiveTimetable] = useState(timetable);
+  const [modifications, setModifications] = useState<TimetableModification[]>([]);
 
   useEffect(() => {
     const storedStudent = sessionStorage.getItem("studentUser");
@@ -47,10 +54,14 @@ export default function StudentTimetablePage() {
     const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
     const todayIndex = new Date().getDay();
     setToday(days[todayIndex]);
+
+    // Load modified timetable
+    setEffectiveTimetable(getEffectiveTimetable());
+    setModifications(getModifications());
   }, []);
 
   const getTimetableForDay = (day: string) => {
-    return timetable
+    return effectiveTimetable
       .filter((entry) => entry.day === day)
       .sort((a, b) => a.period - b.period);
   };
@@ -60,7 +71,8 @@ export default function StudentTimetablePage() {
     return subjects.find((s) => s.id === subjectId);
   };
 
-  const getTeacherInfo = (teacherId: string) => {
+  const getTeacherInfo = (teacherId: string | null) => {
+    if (!teacherId) return null;
     return teachers.find((t) => t.id === teacherId);
   };
 
@@ -68,16 +80,34 @@ export default function StudentTimetablePage() {
     return timeSlots.find((t) => t.period === period);
   };
 
+  // Get modifications for a specific period
+  const getPeriodModification = (day: string, period: number) => {
+    return modifications.find(m => m.day === day && m.period === period);
+  };
+
   const renderPeriod = (entry: any) => {
     const timeSlot = getTimeSlot(entry.period);
     const subject = getSubjectInfo(entry.subjectId);
-    const teacher = subject ? getTeacherInfo(subject.teacherId) : null;
+    const originalTeacher = entry.originalTeacherId
+      ? getTeacherInfo(entry.originalTeacherId)
+      : subject ? getTeacherInfo(subject.teacherId) : null;
+    const substituteTeacher = entry.substituteTeacherId
+      ? getTeacherInfo(entry.substituteTeacherId)
+      : null;
+
+    const isCancelled = entry.type === "cancelled" || entry.isCancelled;
+    const isSubstitute = entry.type === "substitute";
+    const modification = getPeriodModification(entry.day, entry.period);
 
     return (
       <div
         key={`${entry.day}-${entry.period}`}
         className={`p-4 rounded-lg border ${
-          entry.subjectId
+          isCancelled
+            ? "bg-red-50 border-red-200"
+            : isSubstitute
+            ? "bg-amber-50 border-amber-200"
+            : entry.subjectId
             ? "bg-card"
             : "bg-muted/50"
         }`}
@@ -89,18 +119,49 @@ export default function StudentTimetablePage() {
               <span className="text-sm text-muted-foreground">
                 {timeSlot?.startTime} - {timeSlot?.endTime}
               </span>
+              {modification && (
+                <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200">
+                  Modified
+                </Badge>
+              )}
             </div>
 
-            {entry.subjectId ? (
+            {entry.subjectId && !isCancelled ? (
               <>
                 <h4 className="font-semibold text-foreground">{subject?.name}</h4>
                 <p className="text-sm text-muted-foreground">{subject?.code}</p>
-                {teacher && (
+                {isSubstitute && substituteTeacher ? (
+                  <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
+                    <p className="text-sm">
+                      <span className="text-amber-700 font-medium">Substitute: </span>
+                      <span className="text-amber-900">{substituteTeacher.name}</span>
+                    </p>
+                    {originalTeacher && (
+                      <p className="text-xs text-amber-600">
+                        (Original: {originalTeacher.name})
+                      </p>
+                    )}
+                  </div>
+                ) : originalTeacher ? (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Faculty: {teacher.name}
+                    Faculty: {originalTeacher.name}
+                  </p>
+                ) : null}
+              </>
+            ) : isCancelled ? (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  <p className="text-red-700 font-medium line-through">
+                    {subject?.name || typeLabels[entry.type]}
+                  </p>
+                </div>
+                {entry.modificationReason && (
+                  <p className="text-xs text-red-600 ml-6">
+                    Reason: {entry.modificationReason}
                   </p>
                 )}
-              </>
+              </div>
             ) : (
               <p className="text-muted-foreground font-medium">{typeLabels[entry.type]}</p>
             )}
@@ -144,7 +205,25 @@ export default function StudentTimetablePage() {
               <div>
                 <p className="font-medium">Today&apos;s Schedule</p>
                 <p className="text-sm text-muted-foreground">
-                  You have {getTimetableForDay(today).filter(e => e.subjectId).length} classes today
+                  You have {getTimetableForDay(today).filter(e => e.subjectId && e.type !== "cancelled").length} classes today
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Modification Alert */}
+      {modifications.length > 0 && (
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-amber-800">Schedule Updates</p>
+                <p className="text-sm text-amber-700">
+                  {modifications.length} timetable modification(s) have been made.
+                  Please check your schedule for any cancelled classes or substitute teachers.
                 </p>
               </div>
             </div>
@@ -190,10 +269,10 @@ export default function StudentTimetablePage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-primary" />
+              <Users className="h-4 w-4 text-primary" />
               <div>
-                <p className="text-xs text-muted-foreground">Days</p>
-                <p className="text-lg font-bold">Mon-Sat</p>
+                <p className="text-xs text-muted-foreground">Faculty</p>
+                <p className="text-lg font-bold">{teachers.length}</p>
               </div>
             </div>
           </CardContent>
@@ -204,7 +283,7 @@ export default function StudentTimetablePage() {
       <Card>
         <CardHeader>
           <CardTitle>Weekly Timetable</CardTitle>
-          <CardDescription>Your complete class schedule</CardDescription>
+          <CardDescription>Your complete class schedule with updates</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue={today !== "SUN" ? today : "MON"} className="w-full">

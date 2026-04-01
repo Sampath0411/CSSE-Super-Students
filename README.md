@@ -56,12 +56,13 @@ CSSE Super Student App is a 360-degree tool designed for teachers, HODs, and stu
 
 | Feature | Description |
 |---------|-------------|
- | 🔐 **Authentication** | Secure login for Faculty, HOD, and Students |
+ | 🔐 **Authentication** | Secure login for Faculty, HOD, and Students with Session Timeout |
 | 🎯 **Face Recognition** | AI-powered attendance using TensorFlow.js and Teachable Machine |
 | 📊 **Analytics** | Real-time attendance statistics and reports |
 | 📧 **Email Alerts** | Automatic notifications for low attendance (<75%) |
 | 📝 **Assignment Management** | Create and submit assignments with due dates |
 | 📄 **Letter Generation** | Generate and approve official university documents |
+| 📅 **Editable Timetable** | Faculty/HOD can cancel classes or assign substitute teachers |
 | 🌓 **Dark/Light Mode** | Theme toggle with system preference support |
 | 📱 **Responsive Design** | Mobile-first approach for all devices |
 | 🎨 **Animated Preloader** | Custom Andhra University branded loading screen |
@@ -278,6 +279,20 @@ No environment variables are required for basic deployment. The app uses in-memo
 - Light mode, Dark mode, and System preference
 - Persistent theme selection
 - Smooth transitions between themes
+
+### Session Timeout
+- Students: Auto-logout after 30 minutes of inactivity
+- Faculty/HOD: Auto-logout after 1 hour of inactivity
+- Activity tracking on user interactions
+- Automatic redirect to login on timeout
+
+### Editable Timetable
+- Faculty/HOD can cancel scheduled classes
+- Assign substitute teachers for any period
+- Track modification history with timestamps
+- Visual indicators for cancelled/substituted classes
+- Attendance marking respects timetable modifications
+- Students see real-time schedule updates
 
 ---
 

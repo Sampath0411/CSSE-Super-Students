@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { students, subjects, teachers, ATTENDANCE_THRESHOLD, calculateStudentAttendance, type Student, type Subject } from "@/lib/data";
+import { useState, useMemo, useEffect } from "react";
+import { students, subjects, teachers, ATTENDANCE_THRESHOLD, calculateStudentAttendance, timeSlots, type Student, type Subject, type TimetableEntry } from "@/lib/data";
 import { addBulkAttendance } from "@/lib/attendance-store";
+import { getEffectiveTimetable } from "@/lib/timetable-store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Clock, Save, Users, BookOpen, Calendar } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Check, X, Clock, Save, Users, BookOpen, Calendar, AlertTriangle, XCircle } from "lucide-react";
 
 type AttendanceStatus = "present" | "absent" | "late";
 
@@ -16,12 +18,70 @@ interface AttendanceEntry {
   status: AttendanceStatus;
 }
 
+// Helper to get day name from date
+function getDayName(dateStr: string): string {
+  const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  const date = new Date(dateStr);
+  return days[date.getDay()];
+}
+
 export default function AttendancePage() {
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [attendance, setAttendance] = useState<Map<string, AttendanceStatus>>(new Map());
   const [isSaved, setIsSaved] = useState(false);
+  const [effectiveTimetable, setEffectiveTimetable] = useState<TimetableEntry[]>([]);
+
+  // Load effective timetable on mount
+  useEffect(() => {
+    setEffectiveTimetable(getEffectiveTimetable());
+  }, []);
+
+  // Check for timetable modifications
+  const timetableCheck = useMemo(() => {
+    if (!selectedSubject || !selectedPeriod || !selectedDate) return null;
+
+    const dayName = getDayName(selectedDate);
+    const period = parseInt(selectedPeriod);
+
+    const entry = effectiveTimetable.find(
+      (e) => e.day === dayName && e.period === period
+    );
+
+    if (!entry) return { valid: false, message: "No class scheduled for this period" };
+
+    if (entry.type === "cancelled" || entry.isCancelled) {
+      return {
+        valid: false,
+        message: "This class has been cancelled",
+        reason: entry.modificationReason
+      };
+    }
+
+    if (entry.type === "substitute") {
+      const substituteTeacher = entry.substituteTeacherId
+        ? teachers.find((t) => t.id === entry.substituteTeacherId)
+        : null;
+      return {
+        valid: true,
+        isSubstitute: true,
+        substituteTeacher,
+        message: `Substitute teacher: ${substituteTeacher?.name || "Unknown"}`
+      };
+    }
+
+    // Check if subject matches
+    if (entry.subjectId !== selectedSubject) {
+      const expectedSubject = subjects.find((s) => s.id === entry.subjectId);
+      return {
+        valid: false,
+        message: `This period is scheduled for ${expectedSubject?.name || "another subject"}`,
+      };
+    }
+
+    return { valid: true, isSubstitute: false };
+  }, [selectedSubject, selectedPeriod, selectedDate, effectiveTimetable]);
 
   const selectedSubjectData = useMemo(() => {
     return subjects.find((s) => s.id === selectedSubject);
@@ -32,6 +92,8 @@ export default function AttendancePage() {
     const teacher = teachers.find((t) => t.id === selectedSubjectData.teacherId);
     return teacher?.name || "";
   }, [selectedSubjectData]);
+
+  const canMarkAttendance = timetableCheck?.valid === true;
 
   const studentsWithAttendance = useMemo(() => {
     return students.map((student) => {
@@ -159,8 +221,36 @@ export default function AttendancePage() {
           </CardContent>
         </Card>
 
+        {/* Timetable Modification Alert */}
+        {selectedSubject && selectedPeriod && timetableCheck && (
+          <>
+            {!timetableCheck.valid && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium">{timetableCheck.message}</span>
+                    {timetableCheck.reason && (
+                      <span className="text-sm">Reason: {timetableCheck.reason}</span>
+                    )}
+                    <span className="text-sm">Attendance cannot be marked for this period.</span>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+            {timetableCheck.valid && timetableCheck.isSubstitute && (
+              <Alert className="mb-6 bg-amber-50 border-amber-200">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-700">
+                  {timetableCheck.message}. This is a substitute class.
+                </AlertDescription>
+              </Alert>
+            )}
+          </>
+        )}
+
         {/* Quick Stats */}
-        {selectedSubject && selectedPeriod && (
+        {canMarkAttendance && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardContent className="pt-6">
@@ -210,7 +300,7 @@ export default function AttendancePage() {
         )}
 
         {/* Quick Actions */}
-        {selectedSubject && selectedPeriod && (
+        {canMarkAttendance && (
           <div className="flex flex-wrap gap-3 mb-6">
             <Button onClick={markAllPresent} variant="outline" className="border-success text-success hover:bg-success hover:text-success-foreground">
               <Check className="h-4 w-4 mr-2" />
@@ -227,8 +317,22 @@ export default function AttendancePage() {
           </div>
         )}
 
+        {/* Cannot mark attendance message */}
+        {selectedSubject && selectedPeriod && !canMarkAttendance && timetableCheck && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="py-8 text-center">
+              <XCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+              <h3 className="text-lg font-medium text-red-800 mb-2">Attendance Disabled</h3>
+              <p className="text-red-600">{timetableCheck.message}</p>
+              {timetableCheck.reason && (
+                <p className="text-sm text-red-500 mt-2">Reason: {timetableCheck.reason}</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Student List */}
-        {selectedSubject && selectedPeriod ? (
+        {canMarkAttendance ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

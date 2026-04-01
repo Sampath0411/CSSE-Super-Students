@@ -77,7 +77,44 @@ export interface TimetableEntry {
   day: string;
   period: number;
   subjectId: string | null;
-  type: "class" | "lab" | "break" | "ncc/nss" | "self-study" | "remedial";
+  type: "class" | "lab" | "break" | "ncc/nss" | "self-study" | "remedial" | "cancelled" | "substitute";
+  originalTeacherId?: string; // Track original teacher for substitutions
+  substituteTeacherId?: string; // Track substitute teacher
+  isCancelled?: boolean;
+  modifiedBy?: string; // ID of faculty/HOD who made the change
+  modifiedAt?: string; // Timestamp of modification
+  modificationReason?: string; // Reason for change
+}
+
+// Timetable modification history
+export interface TimetableModification {
+  id: string;
+  day: string;
+  period: number;
+  originalSubjectId: string | null;
+  newSubjectId: string | null;
+  originalTeacherId?: string;
+  newTeacherId?: string;
+  action: "assigned" | "cancelled" | "substituted";
+  modifiedBy: string;
+  modifiedByName: string;
+  modifiedAt: string;
+  reason?: string;
+}
+
+// Session timeout configuration
+export const SESSION_TIMEOUTS = {
+  student: 30 * 60 * 1000, // 30 minutes in milliseconds
+  faculty: 60 * 60 * 1000, // 1 hour in milliseconds
+  hod: 60 * 60 * 1000, // 1 hour in milliseconds
+};
+
+// Session activity tracking
+export interface SessionActivity {
+  userId: string;
+  userType: "student" | "faculty" | "hod";
+  lastActivity: number;
+  loginTime: number;
 }
 
 // Time Slots as per actual timetable
