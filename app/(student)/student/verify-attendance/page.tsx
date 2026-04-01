@@ -23,7 +23,7 @@ import {
   isSessionActive,
   SESSION_KEYS,
 } from "@/lib/anti-proxy";
-import { getSessionFromSupabase, type SessionRecord } from "@/lib/supabase";
+import { getSessionFromSupabase } from "@/lib/supabase";
 import { type Student, calculateStudentAttendance, ATTENDANCE_THRESHOLD } from "@/lib/data";
 
 interface SessionInfo {
@@ -43,6 +43,14 @@ export default function VerifyAttendancePage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [isJoining, setIsJoining] = useState(false);
 
+  // Calculate attendance when verified
+  const [attendanceData, setAttendanceData] = useState<{
+    percentage: number;
+    total: number;
+    present: number;
+    isEligible: boolean;
+  } | null>(null);
+
   useEffect(() => {
     const storedStudent = sessionStorage.getItem("studentUser");
     if (storedStudent) {
@@ -57,7 +65,6 @@ export default function VerifyAttendancePage() {
 
       if (otpFromUrl) {
         setSessionCodeInput(otpFromUrl);
-        // Auto-join session from URL using OTP
         await joinSessionWithCode(otpFromUrl);
       }
     };
@@ -114,7 +121,7 @@ export default function VerifyAttendancePage() {
           subjectName: session.subject_name,
           period: session.period,
         });
-        setSuccessMessage("Session joined successfully! Complete the verifications below.");
+        setSuccessMessage("Session joined successfully! Complete the OTP verification below.");
       } else {
         setErrorMessage(result.error || "Session not found. Ask your teacher to start a new session.");
       }
@@ -128,7 +135,7 @@ export default function VerifyAttendancePage() {
   // Join session button handler
   const joinSession = async () => {
     if (!sessionCodeInput || sessionCodeInput.length !== 6) {
-      setErrorMessage("Please enter a valid 6-digit session code");
+      setErrorMessage("Please enter a valid 6-digit OTP");
       return;
     }
     await joinSessionWithCode(sessionCodeInput);
@@ -144,31 +151,22 @@ export default function VerifyAttendancePage() {
     if (result.valid) {
       setOtpVerified(true);
       setErrorMessage("");
+
+      // Calculate attendance
+      if (student) {
+        const data = calculateStudentAttendance(student.id);
+        setAttendanceData({
+          percentage: data.percentage,
+          total: data.total,
+          present: data.present,
+          isEligible: data.percentage >= ATTENDANCE_THRESHOLD,
+        });
+      }
     } else {
       setErrorMessage(result.message);
       setOtpVerified(false);
     }
   };
-
-  // Calculate attendance when all verified
-  const [attendanceData, setAttendanceData] = useState<{
-    percentage: number;
-    total: number;
-    present: number;
-    isEligible: boolean;
-  } | null>(null);
-
-  useEffect(() => {
-    if (allVerified && student) {
-      const data = calculateStudentAttendance(student.id);
-      setAttendanceData({
-        percentage: data.percentage,
-        total: data.total,
-        present: data.present,
-        isEligible: data.percentage >= ATTENDANCE_THRESHOLD,
-      });
-    }
-  }, [allVerified, student]);
 
   if (!student) {
     return (
@@ -187,7 +185,7 @@ export default function VerifyAttendancePage() {
           Verify Attendance
         </h1>
         <p className="text-muted-foreground mt-1">
-          Complete anti-proxy verification to mark your attendance
+          Complete OTP verification to mark your attendance
         </p>
       </div>
 
@@ -237,7 +235,7 @@ export default function VerifyAttendancePage() {
         <Alert className="bg-green-50 border-green-200">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-700">
-            Active session detected! Complete the required verifications below.
+            Session joined! Complete the OTP verification below.
           </AlertDescription>
         </Alert>
       )}
@@ -332,8 +330,8 @@ export default function VerifyAttendancePage() {
             </Alert>
           )}
 
-          {/* Attendance Summary (shown when all verified) */}
-          {allVerified && attendanceData && (
+          {/* Attendance Summary (shown when verified) */}
+          {otpVerified && attendanceData && (
             <Card className="border-primary/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -348,7 +346,8 @@ export default function VerifyAttendancePage() {
                 <div className="text-center p-6 rounded-lg bg-muted/50">
                   <p className="text-5xl font-bold text-foreground">
                     {attendanceData.percentage}%
-                  </p>                  <p className="text-sm text-muted-foreground mt-1">Overall Attendance</p>
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">Overall Attendance</p>
                   <div className="mt-3 h-3 rounded-full bg-muted overflow-hidden">
                     <div
                       className={`h-full transition-all ${
@@ -423,30 +422,5 @@ export default function VerifyAttendancePage() {
         </>
       )}
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: "pending" | "success" | "error" }) {
-  if (status === "success") {
-    return (
-      <Badge variant="default" className="bg-green-600">
-        <CheckCircle2 className="h-3 w-3 mr-1" />
-        Verified
-      </Badge>
-    );
-  }
-  if (status === "error") {
-    return (
-      <Badge variant="destructive">
-        <XCircle className="h-3 w-3 mr-1" />
-        Failed
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="outline">
-      <Loader2 className="h-3 w-3 mr-1" />
-      Pending
-    </Badge>
   );
 }
