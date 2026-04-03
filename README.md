@@ -206,29 +206,111 @@ CSSE-Super-Students/
 
 ## Screenshots
 
-### Login Page
+> **Note:** Add your screenshots to the `/screenshots/` folder and update the paths below
+
+### 1. Login Page
 <p align="center">
+  <img src="./screenshots/login.png" alt="Login Page" width="800" />
+  <br>
   <em>Three-way login system for Faculty, HOD, and Students</em>
 </p>
 
-### Faculty Dashboard
+### 2. Preloader Animation
 <p align="center">
-  <em>Analytics and attendance overview</em>
+  <img src="./screenshots/preloader.png" alt="Preloader" width="800" />
+  <br>
+  <em>Custom Andhra University branded loading animation</em>
 </p>
 
-### HOD Dashboard
+### 3. Faculty Dashboard
 <p align="center">
-  <em>Department overview and letter approvals</em>
+  <img src="./screenshots/faculty-dashboard.png" alt="Faculty Dashboard" width="800" />
+  <br>
+  <em>Analytics, attendance statistics, and quick actions</em>
 </p>
 
-### Face Recognition
+### 4. Face Recognition Attendance
 <p align="center">
-  <em>AI-powered attendance marking</em>
+  <img src="./screenshots/face-recognition.png" alt="Face Recognition" width="800" />
+  <br>
+  <em>AI-powered attendance with TensorFlow.js</em>
 </p>
 
-### Assignments
+### 5. Digital Attendance Register
 <p align="center">
-  <em>Create and manage assignments</em>
+  <img src="./screenshots/attendance-register.png" alt="Attendance Register" width="800" />
+  <br>
+  <em>Manual attendance marking with period-wise tracking</em>
+</p>
+
+### 6. Faculty Assignments
+<p align="center">
+  <img src="./screenshots/faculty-assignments.png" alt="Faculty Assignments" width="800" />
+  <br>
+  <em>Create and manage student assignments</em>
+</p>
+
+### 7. HOD Dashboard
+<p align="center">
+  <img src="./screenshots/hod-dashboard.png" alt="HOD Dashboard" width="800" />
+  <br>
+  <em>Department overview and analytics</em>
+</p>
+
+### 8. Letter Approvals
+<p align="center">
+  <img src="./screenshots/letter-approvals.png" alt="Letter Approvals" width="800" />
+  <br>
+  <em>Review and approve student letter requests</em>
+</p>
+
+### 9. Official Letter Preview
+<p align="center">
+  <img src="./screenshots/official-letter.png" alt="Official Letter" width="800" />
+  <br>
+  <em>Generated official letter with Andhra University watermark</em>
+</p>
+
+### 10. Student Dashboard
+<p align="center">
+  <img src="./screenshots/student-dashboard.png" alt="Student Dashboard" width="800" />
+  <br>
+  <em>Personal attendance overview and notifications</em>
+</p>
+
+### 11. Student Attendance View
+<p align="center">
+  <img src="./screenshots/student-attendance.png" alt="Student Attendance" width="800" />
+  <br>
+  <em>Detailed attendance records with statistics</em>
+</p>
+
+### 12. Student Assignments
+<p align="center">
+  <img src="./screenshots/student-assignments.png" alt="Student Assignments" width="800" />
+  <br>
+  <em>View and submit assignments</em>
+</p>
+
+### 13. Timetable View
+<p align="center">
+  <img src="./screenshots/timetable.png" alt="Timetable" width="800" />
+  <br>
+  <em>Class schedule with substitution tracking</em>
+</p>
+
+### 14. Letter Request
+<p align="center">
+  <img src="./screenshots/letter-request.png" alt="Letter Request" width="800" />
+  <br>
+  <em>Request official documents (Bonafide, Study, Loan, Internship)</em>
+</p>
+
+### 15. Student Profile
+<p align="center">
+  <img src="./screenshots/student-profile.png" alt="Student Profile" width="800" />
+  <br>
+  <em>Student information and academic details</em>
 </p>
 
 ---
