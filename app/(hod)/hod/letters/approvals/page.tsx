@@ -49,7 +49,6 @@ interface LetterRequest {
   status: RequestStatus;
   requestedAt: string;
   additionalDetails?: Record<string, string>;
-  serialNumber?: string;
   adminNotes?: string;
   processedAt?: string;
 }
@@ -100,20 +99,6 @@ export default function LetterApprovalsPage() {
     }
   };
 
-  const generateSerialNumber = (letterType: LetterType): string => {
-    const year = new Date().getFullYear();
-    const typePrefix = letterType.substring(0, 3).toUpperCase();
-
-    // Generate random alphanumeric string (6 characters)
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let random = "";
-    for (let i = 0; i < 6; i++) {
-      random += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-
-    return `AU/CSSE/${typePrefix}/${year}/${random}`;
-  };
-
   const handleApprove = (request: LetterRequest) => {
     setSelectedRequest(request);
     setStudentDetails(getStudentById(request.studentId));
@@ -140,13 +125,12 @@ export default function LetterApprovalsPage() {
   const confirmApproval = () => {
     if (!selectedRequest) return;
 
-    const serialNumber = generateSerialNumber(selectedRequest.letterType);
     const processedAt = new Date().toISOString();
 
     // Update request status
     const updatedRequests = requests.map((req) =>
       req.id === selectedRequest.id
-        ? { ...req, status: "approved" as const, serialNumber, adminNotes, processedAt }
+        ? { ...req, status: "approved" as const, adminNotes, processedAt }
         : req
     );
 
@@ -157,7 +141,6 @@ export default function LetterApprovalsPage() {
     const approvedLetter = {
       ...selectedRequest,
       status: "approved" as const,
-      serialNumber,
       adminNotes,
       processedAt,
     };
@@ -178,15 +161,14 @@ export default function LetterApprovalsPage() {
       studentId: selectedRequest.studentId,
       type: "letter_approved",
       title: "Letter Request Approved",
-      message: `Your ${letterTypeNames[selectedRequest.letterType]} has been approved with serial number ${serialNumber}. Click to download your official letter.`,
+      message: `Your ${letterTypeNames[selectedRequest.letterType]} has been approved. You can download your official letter from the Letters page.`,
       letterRequestId: selectedRequest.id,
-      serialNumber: serialNumber,
       letterType: selectedRequest.letterType,
     });
 
     setRequests(updatedRequests);
     setShowDialog(false);
-    setSuccessMessage(`Letter approved! Serial No: ${serialNumber}. Notification sent to student.`);
+    setSuccessMessage(`Letter approved! Notification sent to student.`);
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 5000);
   };
@@ -243,7 +225,7 @@ export default function LetterApprovalsPage() {
         printWindow.document.write(`
           <html>
             <head>
-              <title>Official Letter - ${selectedRequest?.serialNumber}</title>
+              <title>Official Letter</title>
               <style>
                 body { font-family: 'Times New Roman', serif; padding: 40px; line-height: 1.8; }
                 .header { text-align: center; margin-bottom: 30px; }
@@ -252,13 +234,7 @@ export default function LetterApprovalsPage() {
                 .header p { margin: 5px 0; font-size: 14px; }
                 .content { margin: 30px 0; text-align: justify; }
                 .signature { margin-top: 60px; text-align: right; }
-                .ref-no { text-align: left; margin-bottom: 20px; }
-                .serial-box {
-                  border: 1px solid #000;
-                  padding: 4px 12px;
-                  font-weight: bold;
-                  display: inline-block;
-                }
+                .ref-no { text-align: right; margin-bottom: 20px; }
                 @media print {
                   body { margin: 0; padding: 20mm; }
                 }
@@ -279,7 +255,7 @@ export default function LetterApprovalsPage() {
     if (!studentDetails || !selectedRequest) return null;
 
     const currentDate = getCurrentDate();
-    const { letterType, serialNumber, additionalDetails } = selectedRequest;
+    const { letterType, additionalDetails } = selectedRequest;
 
     const letterContent: Record<LetterType, React.ReactElement> = {
       bonafide: (
@@ -305,8 +281,7 @@ export default function LetterApprovalsPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6 relative z-10">
-            <span className="serial-box">Serial No: {serialNumber}</span>
+          <div className="ref-no flex justify-end text-sm mb-6 relative z-10">
             <span>Date: {currentDate}</span>
           </div>
 
@@ -362,8 +337,7 @@ export default function LetterApprovalsPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6 relative z-10">
-            <span className="serial-box">Serial No: {serialNumber}</span>
+          <div className="ref-no flex justify-end text-sm mb-6 relative z-10">
             <span>Date: {currentDate}</span>
           </div>
 
@@ -422,8 +396,7 @@ export default function LetterApprovalsPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6 relative z-10">
-            <span className="serial-box">Serial No: {serialNumber}</span>
+          <div className="ref-no flex justify-end text-sm mb-6 relative z-10">
             <span>Date: {currentDate}</span>
           </div>
 
@@ -490,8 +463,7 @@ export default function LetterApprovalsPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6 relative z-10">
-            <span className="serial-box">Serial No: {serialNumber}</span>
+          <div className="ref-no flex justify-end text-sm mb-6 relative z-10">
             <span>Date: {currentDate}</span>
           </div>
 
@@ -566,7 +538,6 @@ export default function LetterApprovalsPage() {
           </p>
           <p className="text-xs text-muted-foreground">
             Requested: {new Date(request.requestedAt).toLocaleDateString()}
-            {request.serialNumber && ` • Serial: ${request.serialNumber}`}
           </p>
           {request.adminNotes && (
             <p className="text-xs text-muted-foreground mt-2 italic">

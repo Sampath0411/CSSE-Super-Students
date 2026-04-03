@@ -112,18 +112,9 @@ export default function LettersPage() {
     });
   };
 
-  const generateRefNumber = () => {
-    const year = new Date().getFullYear();
-    const random = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0");
-    return `AU/CSSE/${year}/${random}`;
-  };
-
   const renderLetter = () => {
     if (!selectedStudent || !selectedLetter) return null;
 
-    const refNo = generateRefNumber();
     const currentDate = getCurrentDate();
 
     const letterContent: Record<LetterType, React.ReactElement> = {
@@ -135,8 +126,7 @@ export default function LettersPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6">
-            <span>Ref. No: {refNo}</span>
+          <div className="ref-no flex justify-end text-sm mb-6">
             <span>Date: {currentDate}</span>
           </div>
 
@@ -177,8 +167,7 @@ export default function LettersPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6">
-            <span>Ref. No: {refNo}</span>
+          <div className="ref-no flex justify-end text-sm mb-6">
             <span>Date: {currentDate}</span>
           </div>
 
@@ -232,8 +221,7 @@ export default function LettersPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6">
-            <span>Ref. No: {refNo}</span>
+          <div className="ref-no flex justify-end text-sm mb-6">
             <span>Date: {currentDate}</span>
           </div>
 
@@ -314,8 +302,7 @@ export default function LettersPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6">
-            <span>Ref. No: {refNo}</span>
+          <div className="ref-no flex justify-end text-sm mb-6">
             <span>Date: {currentDate}</span>
           </div>
 

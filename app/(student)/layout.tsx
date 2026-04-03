@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import {
   GraduationCap,
   LayoutDashboard,
-  ClipboardCheck,
   User,
   LogOut,
   Menu,
@@ -30,11 +29,6 @@ const navItems = [
     title: "Dashboard",
     href: "/student",
     icon: LayoutDashboard,
-  },
-  {
-    title: "My Attendance",
-    href: "/student/attendance",
-    icon: ClipboardCheck,
   },
   {
     title: "Timetable",

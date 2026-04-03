@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Image from "next/image";
-import { FileText, Send, GraduationCap, Briefcase, CreditCard, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { FileText, Send, GraduationCap, Briefcase, CreditCard, AlertCircle, CheckCircle2, Clock, Download } from "lucide-react";
 
 type LetterType = "bonafide" | "study" | "loan" | "internship";
 type RequestStatus = "pending" | "approved" | "rejected";
@@ -31,7 +31,6 @@ interface LetterRequest {
   status: RequestStatus;
   requestedAt: string;
   additionalDetails?: Record<string, string>;
-  serialNumber?: string;
 }
 
 const letterTypes: LetterConfig[] = [
@@ -117,6 +116,151 @@ export default function StudentLettersPage() {
     });
   };
 
+  const handleDownloadLetter = (request: LetterRequest) => {
+    const currentDate = new Date(request.requestedAt).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+
+    const generateLetterHTML = () => {
+      const letterType = request.letterType;
+      const additionalDetails = request.additionalDetails || {};
+
+      const content: Record<LetterType, string> = {
+        bonafide: `
+          <div class="header" style="text-align: center; margin-bottom: 30px;">
+            <h1 style="font-size: 24px; margin: 0;">ANDHRA UNIVERSITY</h1>
+            <h2 style="font-size: 18px; margin: 5px 0;">Department of Computer Science and Systems Engineering</h2>
+            <p style="margin: 5px 0; font-size: 14px;">Visakhapatnam - 530003, Andhra Pradesh, India</p>
+          </div>
+          <div style="text-align: right; margin-bottom: 20px; font-size: 14px;">Date: ${currentDate}</div>
+          <h3 style="text-align: center; font-size: 20px; font-weight: bold; text-decoration: underline; margin-bottom: 30px;">BONAFIDE CERTIFICATE</h3>
+          <div style="text-align: justify; line-height: 1.8;">
+            <p style="margin-bottom: 16px;">This is to certify that <strong>${student?.name}</strong>, bearing Registration Number <strong>${student?.regdNo}</strong> and Roll Number <strong>${student?.rollNumber}</strong>, is a bonafide student of this department, currently pursuing <strong>${student?.course}</strong> in <strong>${student?.branch}</strong>.</p>
+            <p style="margin-bottom: 16px;">The student is currently in <strong>Year ${student?.year}</strong>, <strong>Semester ${student?.semester}</strong> of the program. The student was admitted to this course on <strong>${new Date(student?.dateOfAdmission || "").toLocaleDateString("en-IN")}</strong>.</p>
+            <p>This certificate is issued upon request for whatever purpose it may serve. The student's conduct and character during the period of study has been found to be satisfactory.</p>
+          </div>
+          <div style="margin-top: 60px; text-align: right;">
+            <p style="margin-bottom: 48px;">Head of the Department</p>
+            <p style="font-weight: bold;">Dr. Valli Kumari V</p>
+            <p>Professor & HOD</p>
+            <p>Dept. of CSSE, Andhra University</p>
+          </div>
+        `,
+        study: `
+          <div class="header" style="text-align: center; margin-bottom: 30px;">
+            <h1 style="font-size: 24px; margin: 0;">ANDHRA UNIVERSITY</h1>
+            <h2 style="font-size: 18px; margin: 5px 0;">Department of Computer Science and Systems Engineering</h2>
+            <p style="margin: 5px 0; font-size: 14px;">Visakhapatnam - 530003, Andhra Pradesh, India</p>
+          </div>
+          <div style="text-align: right; margin-bottom: 20px; font-size: 14px;">Date: ${currentDate}</div>
+          <h3 style="text-align: center; font-size: 20px; font-weight: bold; text-decoration: underline; margin-bottom: 30px;">STUDY CERTIFICATE</h3>
+          <div style="text-align: justify; line-height: 1.8;">
+            <p style="margin-bottom: 16px;">This is to certify that <strong>${student?.name}</strong>, S/o or D/o of the guardian, bearing Registration Number <strong>${student?.regdNo}</strong>, has been studying in this institution.</p>
+            <p style="margin-bottom: 16px;"><strong>Course Details:</strong></p>
+            <ul style="list-style: none; margin-bottom: 16px; margin-left: 32px;">
+              <li>Program: <strong>${student?.course}</strong></li>
+              <li>Branch: <strong>${student?.branch}</strong></li>
+              <li>Current Year: <strong>${student?.year}</strong></li>
+              <li>Current Semester: <strong>${student?.semester}</strong></li>
+              <li>Date of Admission: <strong>${new Date(student?.dateOfAdmission || "").toLocaleDateString("en-IN")}</strong></li>
+            </ul>
+            <p>This certificate is issued for the purpose of records and verification. The above information is true to the best of our knowledge and records.</p>
+          </div>
+          <div style="margin-top: 60px; text-align: right;">
+            <p style="margin-bottom: 48px;">Head of the Department</p>
+            <p style="font-weight: bold;">Dr. Valli Kumari V</p>
+            <p>Professor & HOD</p>
+            <p>Dept. of CSSE, Andhra University</p>
+          </div>
+        `,
+        loan: `
+          <div class="header" style="text-align: center; margin-bottom: 30px;">
+            <h1 style="font-size: 24px; margin: 0;">ANDHRA UNIVERSITY</h1>
+            <h2 style="font-size: 18px; margin: 5px 0;">Department of Computer Science and Systems Engineering</h2>
+            <p style="margin: 5px 0; font-size: 14px;">Visakhapatnam - 530003, Andhra Pradesh, India</p>
+          </div>
+          <div style="text-align: right; margin-bottom: 20px; font-size: 14px;">Date: ${currentDate}</div>
+          <h3 style="text-align: center; font-size: 20px; font-weight: bold; text-decoration: underline; margin-bottom: 30px;">EDUCATION LOAN ESTIMATION LETTER</h3>
+          <p style="margin-bottom: 16px;">To,<br/>The Branch Manager,<br/>${additionalDetails.bankName || "[Bank Name]"},<br/>[Branch Address]</p>
+          <p style="margin-bottom: 16px;"><strong>Subject:</strong> Education Loan for ${student?.name} - Estimation of Expenses</p>
+          <div style="text-align: justify; line-height: 1.8;">
+            <p style="margin-bottom: 16px;">This is to certify that <strong>${student?.name}</strong>, bearing Registration Number <strong>${student?.regdNo}</strong>, is a bonafide student of this department, currently pursuing <strong>${student?.course}</strong> in <strong>${student?.branch}</strong>.</p>
+            <p style="margin-bottom: 16px;">The estimated expenses for the course are as follows:</p>
+            <ul style="list-style: none; margin-bottom: 16px; margin-left: 32px;">
+              <li>Tuition Fee: <strong>Rs. ${additionalDetails.loanAmount || "[Amount]"}</strong></li>
+              <li>Other Expenses: <strong>As per actuals</strong></li>
+            </ul>
+            <p>This letter is issued for the purpose of obtaining an educational loan.</p>
+          </div>
+          <div style="margin-top: 60px; text-align: right;">
+            <p style="margin-bottom: 48px;">Head of the Department</p>
+            <p style="font-weight: bold;">Dr. Valli Kumari V</p>
+            <p>Professor & HOD</p>
+            <p>Dept. of CSSE, Andhra University</p>
+          </div>
+        `,
+        internship: `
+          <div class="header" style="text-align: center; margin-bottom: 30px;">
+            <h1 style="font-size: 24px; margin: 0;">ANDHRA UNIVERSITY</h1>
+            <h2 style="font-size: 18px; margin: 5px 0;">Department of Computer Science and Systems Engineering</h2>
+            <p style="margin: 5px 0; font-size: 14px;">Visakhapatnam - 530003, Andhra Pradesh, India</p>
+          </div>
+          <div style="text-align: right; margin-bottom: 20px; font-size: 14px;">Date: ${currentDate}</div>
+          <h3 style="text-align: center; font-size: 20px; font-weight: bold; text-decoration: underline; margin-bottom: 30px;">INTERNSHIP PERMISSION LETTER</h3>
+          <p style="margin-bottom: 16px;">To,<br/>The HR Manager,<br/>${additionalDetails.companyName || "[Company Name]"},<br/>[Company Address]</p>
+          <p style="margin-bottom: 16px;"><strong>Subject:</strong> Permission for Internship - ${student?.name}</p>
+          <div style="text-align: justify; line-height: 1.8;">
+            <p style="margin-bottom: 16px;">This is to certify that <strong>${student?.name}</strong>, bearing Registration Number <strong>${student?.regdNo}</strong> and Roll Number <strong>${student?.rollNumber}</strong>, is a bonafide student of this department, currently pursuing <strong>${student?.course}</strong> in <strong>${student?.branch}</strong>.</p>
+            <p style="margin-bottom: 16px;">The student is permitted to undergo an internship program at your organization for a duration of <strong>${additionalDetails.internshipDuration || "[Duration]"}</strong>.</p>
+            <p>We request you to kindly provide the necessary facilities for the internship. This letter is issued with the approval of the Head of the Department.</p>
+          </div>
+          <div style="margin-top: 60px; text-align: right;">
+            <p style="margin-bottom: 48px;">Head of the Department</p>
+            <p style="font-weight: bold;">Dr. Valli Kumari V</p>
+            <p>Professor & HOD</p>
+            <p>Dept. of CSSE, Andhra University</p>
+          </div>
+        `,
+      };
+
+      return content[letterType];
+    };
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>${letterTypes.find(t => t.id === request.letterType)?.name}</title>
+          <style>
+            body { font-family: 'Times New Roman', serif; padding: 40px; line-height: 1.8; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .header h1 { font-size: 24px; margin: 0; }
+            .header h2 { font-size: 18px; margin: 5px 0; }
+            .header p { margin: 5px 0; font-size: 14px; }
+            @media print {
+              body { margin: 0; padding: 20mm; }
+            }
+          </style>
+        </head>
+        <body>
+          ${generateLetterHTML()}
+        </body>
+      </html>
+    `;
+
+    // Create a blob and download
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${request.letterType}_letter_${student?.rollNumber}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
 
   const generateId = () => {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -190,8 +334,7 @@ export default function StudentLettersPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6 relative z-10">
-            <span className="pending-serial">Serial No: PENDING</span>
+          <div className="ref-no flex justify-end text-sm mb-6 relative z-10">
             <span>Date: {currentDate}</span>
           </div>
 
@@ -248,8 +391,7 @@ export default function StudentLettersPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6 relative z-10">
-            <span className="pending-serial">Serial No: PENDING</span>
+          <div className="ref-no flex justify-end text-sm mb-6 relative z-10">
             <span>Date: {currentDate}</span>
           </div>
 
@@ -312,8 +454,7 @@ export default function StudentLettersPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6 relative z-10">
-            <span className="pending-serial">Serial No: PENDING</span>
+          <div className="ref-no flex justify-end text-sm mb-6 relative z-10">
             <span>Date: {currentDate}</span>
           </div>
 
@@ -384,8 +525,7 @@ export default function StudentLettersPage() {
             <p className="text-sm text-gray-600">Visakhapatnam - 530003, Andhra Pradesh, India</p>
           </div>
 
-          <div className="ref-no flex justify-between text-sm mb-6 relative z-10">
-            <span className="pending-serial">Serial No: PENDING</span>
+          <div className="ref-no flex justify-end text-sm mb-6 relative z-10">
             <span>Date: {getCurrentDate()}</span>
           </div>
 
@@ -567,7 +707,7 @@ export default function StudentLettersPage() {
                 </Button>
               </CardTitle>
               <CardDescription>
-                This preview shows &quot;PENDING&quot; serial number and watermark. Official letter will be issued after approval.
+                Preview your letter before submitting the request.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -584,7 +724,7 @@ export default function StudentLettersPage() {
         <Card>
           <CardHeader>
             <CardTitle>My Letter Requests</CardTitle>
-            <CardDescription>Track the status of your letter requests</CardDescription>
+            <CardDescription>Track and download your letter requests</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -593,18 +733,25 @@ export default function StudentLettersPage() {
                   key={request.id}
                   className="flex items-center justify-between p-4 rounded-lg bg-muted/50"
                 >
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium">
                       {letterTypes.find((t) => t.id === request.letterType)?.name}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Requested: {new Date(request.requestedAt).toLocaleDateString()}
                     </p>
-                    {request.serialNumber && (
-                      <p className="text-sm text-green-600">Serial: {request.serialNumber}</p>
-                    )}
                   </div>
-                  <div>{getStatusBadge(request.status)}</div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(request.status)}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownloadLetter(request)}
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      Download
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
