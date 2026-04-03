@@ -125,12 +125,12 @@ export default function StudentDashboardPage() {
               {student.course} - {student.year}rd Year, Semester {student.semester}
             </p>
           </div>
-          <Button asChild size="lg" variant="secondary">
+          {/* <Button asChild size="lg" variant="secondary">
             <Link href="/student/verify-attendance">
               <Shield className="h-5 w-5 mr-2" />
               Verify Attendance
             </Link>
-          </Button>
+          </Button> */}
         </div>
       </div>
 
