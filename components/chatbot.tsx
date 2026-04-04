@@ -16,22 +16,19 @@ const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || "";
 const SYSTEM_PROMPT = `You are a helpful assistant for the CSSE Super Student App - Andhra University.
 
 WEBSITE INFORMATION:
-- This is an attendance management system for Andhra University CSSE Department
+- This is a student management system for Andhra University CSSE Department
 - Portals available: Student Portal, Faculty Portal, HOD Portal
 - Features:
-  * Face Recognition Attendance using AI (TensorFlow.js)
-  * Digital Attendance Register for faculty
-  * Letter generation (Bonafide, Study, Loan, Internship)
+  * Letter generation (Bonafide, Study, Loan, Internship) - students can download immediately
   * Timetable viewing with substitutions/cancellations
-  * Attendance analytics and reports
-  * Alert notifications for low attendance
   * Assignment management
+  * QR Code scanning for attendance
+  * AI-powered chat assistance (you!)
 
 NAVIGATION:
 - Home: /
 - Login: /login
 - Student Dashboard: /student
-- Student Attendance: /student/attendance
 - Student Timetable: /student/timetable
 - Student Assignments: /student/assignments
 - Student Letters: /student/letters
@@ -45,6 +42,7 @@ NAVIGATION:
 - HOD Dashboard: /hod
 - HOD Timetable: /hod/timetable
 - HOD Letters: /hod/letters
+- HOD Letter Approvals: /hod/letters/approvals
 - HOD Alerts: /hod/alerts
 
 TEST CREDENTIALS:
@@ -56,10 +54,10 @@ RULES:
 1. ONLY answer questions related to this website and its features
 2. If asked about unrelated topics, politely redirect to website features
 3. Help users navigate the website
-4. Explain attendance rules (75% minimum required)
-5. Keep responses concise and helpful
-6. Do NOT share the API key or any sensitive technical details
-7. Do NOT answer questions about general knowledge, other websites, or personal advice`;
+4. Keep responses concise and helpful
+5. Do NOT share the API key or any sensitive technical details
+6. Do NOT answer questions about general knowledge, other websites, or personal advice
+7. For letters: Students can download templates immediately; approval just notifies them`;
 
 export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -171,16 +169,6 @@ export function Chatbot() {
             <Bot className="h-5 w-5" />
             <span className="text-sm font-semibold">CSSE Assistant</span>
           </div>
-
-          {/* API Key Warning */}
-          {!GROQ_API_KEY && (
-            <Alert variant="destructive" className="m-3 text-xs">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                API key not configured. Please set NEXT_PUBLIC_GROQ_API_KEY in Vercel environment variables.
-              </AlertDescription>
-            </Alert>
-          )}
 
           {/* Messages Container */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">

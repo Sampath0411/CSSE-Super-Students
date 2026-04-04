@@ -56,10 +56,8 @@ export function cancelPeriod(
   if (entryIndex === -1) return;
 
   const entry = currentTimetable[entryIndex];
-  const originalSubjectId = entry.subjectId;
-  const subject = entry.subjectId
-    ? timetable.find((s) => s.day === day && s.period === period)?.subjectId
-    : null;
+  const originalEntry = timetable.find((s) => s.day === day && s.period === period);
+  const originalSubjectId = originalEntry?.subjectId || null;
 
   // Update the entry
   const updatedEntry: TimetableEntry = {
