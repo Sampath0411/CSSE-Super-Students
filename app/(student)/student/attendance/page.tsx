@@ -34,7 +34,7 @@ export default function StudentAttendancePage() {
       subjectCode: string;
       period: number;
       time: string;
-      status: "present" | "absent";
+      status: "present" | "absent" | "late";
     }>
   >([]);
 
@@ -300,6 +300,8 @@ export default function StudentAttendancePage() {
                       <div className="flex items-center gap-3">
                         {record.status === "present" ? (
                           <CheckCircle2 className="h-5 w-5 text-success" />
+                        ) : record.status === "late" ? (
+                          <Clock className="h-5 w-5 text-warning" />
                         ) : (
                           <XCircle className="h-5 w-5 text-destructive" />
                         )}

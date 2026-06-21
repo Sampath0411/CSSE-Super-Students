@@ -12,7 +12,6 @@ import {
   LogOut,
   Home,
   Calendar,
-  ScanFace,
   Bell,
   BookOpen,
   CheckCircle2,
@@ -35,12 +34,6 @@ const navItems = [
     href: "/faculty/attendance",
     icon: ClipboardCheck,
     description: "Mark Attendance",
-  },
-  {
-    title: "Face Attendance",
-    href: "/faculty/face-attendance",
-    icon: ScanFace,
-    description: "AI Face Recognition",
   },
   {
     title: "Timetable",

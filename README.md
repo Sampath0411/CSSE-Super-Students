@@ -31,9 +31,7 @@ CSSE Super Student App is a 360-degree tool designed for teachers, HODs, and stu
 
 #### Faculty Portal
 - **Dashboard**: Analytics, attendance reports, and statistics
-- **Attendance Management**:
-  - Manual attendance marking
-  - AI-powered Face Recognition attendance using TensorFlow.js
+- **Attendance Management**: Manual attendance marking with timetable validation
 - **Timetable**: View complete class schedule
 - **Assignments**: Create, edit, and manage student assignments
 
@@ -57,7 +55,6 @@ CSSE Super Student App is a 360-degree tool designed for teachers, HODs, and stu
 | Feature | Description |
 |---------|-------------|
  | 🔐 **Authentication** | Secure login for Faculty, HOD, and Students with Session Timeout |
-| 🎯 **Face Recognition** | AI-powered attendance using TensorFlow.js and Teachable Machine |
 | 📊 **Analytics** | Real-time attendance statistics and reports |
 | 📧 **Email Alerts** | Automatic notifications for low attendance (<75%) |
 | 📝 **Assignment Management** | Create and submit assignments with due dates |
@@ -78,10 +75,6 @@ CSSE Super Student App is a 360-degree tool designed for teachers, HODs, and stu
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
 - **Animations**: [Framer Motion](https://www.framer.com/motion/)
 - **Icons**: [Lucide React](https://lucide.dev/)
-
-### AI/ML
-- **Face Recognition**: [TensorFlow.js](https://www.tensorflow.org/js) with Custom Teachable Machine Model
-- **Model**: Trained for 4 people (Somesh, Deepesh, Balu, Susheel)
 
 ### Analytics
 - **Web Analytics**: [Vercel Analytics](https://vercel.com/analytics)
@@ -159,7 +152,6 @@ CSSE-Super-Students/
 │   ├── (faculty)/            # Faculty routes (grouped)
 │   │   ├── faculty/          # Faculty dashboard
 │   │   ├── faculty/attendance/       # Manual attendance page
-│   │   ├── faculty/face-attendance/  # Face recognition page
 │   │   ├── faculty/assignments/      # Assignment management
 │   │   ├── faculty/timetable/        # Timetable view
 │   │   └── layout.tsx        # Faculty layout
@@ -193,8 +185,6 @@ CSSE-Super-Students/
 │   ├── attendance-store.ts   # Attendance state
 │   ├── notifications.ts      # Notifications system
 │   └── anti-proxy.ts         # Anti-proxy utilities
-├── models/                   # AI/ML models
-│   └── face-detection/       # TensorFlow models
 ├── public/                   # Static assets
 │   └── au-logo.png           # Andhra University logo
 ├── package.json
@@ -229,14 +219,7 @@ CSSE-Super-Students/
   <em>Analytics, attendance statistics, and quick actions</em>
 </p>
 
-### 4. Face Recognition Attendance
-<p align="center">
-  <img src="./screenshots/face-recognition.png" alt="Face Recognition" width="800" />
-  <br>
-  <em>AI-powered attendance with TensorFlow.js</em>
-</p>
-
-### 5. Digital Attendance Register
+### 4. Digital Attendance Register
 <p align="center">
   <img src="./screenshots/attendance-register.png" alt="Attendance Register" width="800" />
   <br>
@@ -333,12 +316,6 @@ No environment variables are required for basic deployment. The app uses in-memo
 
 ## Features in Detail
 
-### Face Recognition Attendance
-- Uses TensorFlow.js with a custom Teachable Machine model
-- 85% confidence threshold for accurate recognition
-- Supports 4 trained individuals
-- Real-time face detection and attendance marking
-
 ### Email Alerts
 - Automatically triggered when attendance falls below 75%
 - 24-hour cooldown to prevent spam
@@ -414,5 +391,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
   <img src="https://img.shields.io/badge/Next.js-16.2.0-black?style=for-the-badge&logo=next.js" alt="Next.js" />
   <img src="https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=for-the-badge&logo=tailwind-css" alt="Tailwind" />
-  <img src="https://img.shields.io/badge/TensorFlow.js-4.22-FF6F00?style=for-the-badge&logo=tensorflow" alt="TensorFlow.js" />
 </p>

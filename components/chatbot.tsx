@@ -22,7 +22,6 @@ WEBSITE INFORMATION:
   * Letter generation (Bonafide, Study, Loan, Internship) - students can download immediately
   * Timetable viewing with substitutions/cancellations
   * Assignment management
-  * QR Code scanning for attendance
   * AI-powered chat assistance (you!)
 
 NAVIGATION:
@@ -36,7 +35,6 @@ NAVIGATION:
 - Student Profile: /student/profile
 - Faculty Dashboard: /faculty
 - Faculty Attendance: /faculty/attendance
-- Faculty Face Attendance: /faculty/face-attendance
 - Faculty Timetable: /faculty/timetable
 - Faculty Assignments: /faculty/assignments
 - HOD Dashboard: /hod

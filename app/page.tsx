@@ -11,7 +11,7 @@ import {
   Bell,
   ArrowRight,
   CheckCircle,
-  ScanFace,
+  Calendar,
   LogIn,
   UserCog,
   Shield,
@@ -19,7 +19,7 @@ import {
 
 const highlights = [
   "Real-time attendance tracking with instant percentage calculation",
-  "AI-powered face recognition attendance using TensorFlow.js",
+  "Editable timetable with class cancellations and substitute teachers",
   "Automatic flagging of students below 75% attendance threshold",
   "Simulated SMS/Email alerts for chronic absentees",
   "One-click document generation with student data auto-fill",
@@ -133,7 +133,7 @@ export default function HomePage() {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-success" />
-                    Face recognition attendance
+                    Edit timetables & substitutions
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-success" />
@@ -210,9 +210,9 @@ export default function HomePage() {
               <p className="text-xs text-muted-foreground">View reports & trends</p>
             </Card>
             <Card className="text-center p-4">
-              <ScanFace className="h-8 w-8 text-warning mx-auto mb-2" />
-              <p className="font-medium text-sm">Face Attendance</p>
-              <p className="text-xs text-muted-foreground">AI-powered recognition</p>
+              <Calendar className="h-8 w-8 text-warning mx-auto mb-2" />
+              <p className="font-medium text-sm">Smart Timetable</p>
+              <p className="text-xs text-muted-foreground">Cancellations & substitutes</p>
             </Card>
             <Card className="text-center p-4">
               <FileText className="h-8 w-8 text-accent mx-auto mb-2" />
@@ -246,7 +246,7 @@ export default function HomePage() {
               <Card>
                 <CardContent className="pt-6">
                   <Users className="h-8 w-8 text-primary mb-2" />
-                  <p className="text-3xl font-bold text-foreground">30</p>
+                  <p className="text-3xl font-bold text-foreground">32</p>
                   <p className="text-sm text-muted-foreground">Real Students</p>
                 </CardContent>
               </Card>

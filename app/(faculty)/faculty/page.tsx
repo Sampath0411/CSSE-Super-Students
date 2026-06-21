@@ -51,7 +51,7 @@ import {
 const COLORS = ["oklch(0.55 0.18 160)", "oklch(0.55 0.22 25)", "oklch(0.75 0.15 70)", "oklch(0.45 0.15 250)"];
 
 export default function DashboardPage() {
-  const [selectedDate, setSelectedDate] = useState<string>("2024-03-15");
+  const [selectedDate, setSelectedDate] = useState<string>("2026-02-16");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [viewMode, setViewMode] = useState<"day" | "subject" | "semester">("day");
 
@@ -120,7 +120,7 @@ export default function DashboardPage() {
   // Attendance trend data (last 10 days simulation)
   const attendanceTrendData = useMemo(() => {
     const dates = [];
-    const startDate = new Date("2024-03-01");
+    const startDate = new Date("2026-02-02");
     for (let i = 0; i < 15; i++) {
       const date = new Date(startDate);
       date.setDate(date.getDate() + i);

@@ -15,7 +15,6 @@ import {
   AlertTriangle,
   CheckCircle,
   ArrowRight,
-  Shield,
 } from "lucide-react";
 import {
   type Student,
@@ -26,6 +25,12 @@ import {
   calculateStudentAttendance,
   ATTENDANCE_THRESHOLD,
 } from "@/lib/data";
+
+// Convert a numeric year into an ordinal label (1 -> "1st", 3 -> "3rd")
+function getYearLabel(year: number): string {
+  const suffixes: Record<number, string> = { 1: "st", 2: "nd", 3: "rd" };
+  return `${year}${suffixes[year] || "th"}`;
+}
 
 export default function StudentDashboardPage() {
   const [student, setStudent] = useState<Student | null>(null);
@@ -122,15 +127,9 @@ export default function StudentDashboardPage() {
               Welcome back, {student.name.split(" ")[0]}!
             </h1>
             <p className="text-muted-foreground mt-1">
-              {student.course} - {student.year}rd Year, Semester {student.semester}
+              {student.course} - {getYearLabel(student.year)} Year, Semester {student.semester}
             </p>
           </div>
-          {/* <Button asChild size="lg" variant="secondary">
-            <Link href="/student/verify-attendance">
-              <Shield className="h-5 w-5 mr-2" />
-              Verify Attendance
-            </Link>
-          </Button> */}
         </div>
       </div>
 

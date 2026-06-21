@@ -229,33 +229,7 @@ Logout → Clear sessionStorage → Redirect to /
 └─────────────────────────────────────────────────┘
 ```
 
-### 3.3 Face Recognition Attendance
-```
-/faculty/face-attendance
-    ↓
-┌─────────────────────────────────────────────────┐
-│ Setup:                                          │
-│ ├─ Select Subject                               │
-│ ├─ Select Period                                │
-│ └─ Load TensorFlow.js model                    │
-│                                                 │
-│ Recognition Process:                            │
-│ 1. Camera activates                             │
-│ 2. Face detection (real-time)                  │
-│ 3. Student matching (confidence > 85%)        │
-│ 4. Match found:                                │
-│    ├─ Display student info                     │
-│    ├─ Auto-mark attendance                     │
-│    └─ Log success                              │
-│ 5. No match:                                   │
-│    └─ Display error, try again                │
-│                                                 │
-│ Model Training:                                 │
-│ └─ Trained on 30 student faces                 │
-└─────────────────────────────────────────────────┘
-```
-
-### 3.4 Assignment Management
+### 3.3 Assignment Management
 ```
 /faculty/assignments
     ↓
@@ -283,7 +257,7 @@ Logout → Clear sessionStorage → Redirect to /
 └─────────────────────────────────────────────────┘
 ```
 
-### 3.5 Timetable Management
+### 3.4 Timetable Management
 ```
 /faculty/timetable
     ↓
@@ -386,8 +360,8 @@ Same as Faculty Dashboard but with additional:
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
 │   Faculty   │────▶│  Mark Attend │────▶│ attendanceRecords│
-│   Action    │     │   (Manual/   │     │   (in-memory)   │
-│             │     │    Face/QR)  │     │                 │
+│   Action    │     │   (Manual)   │     │   (in-memory)   │
+│             │     │              │     │                 │
 └─────────────┘     └──────────────┘     └────────┬────────┘
                                                    │
                           ┌────────────────────────┘
@@ -550,7 +524,6 @@ Password Storage (Demo):
 |---------|---------|---------|-----|
 | View Own Attendance | ✅ | ✅ | ✅ |
 | Mark Attendance | ❌ | ✅ | ✅ |
-| Face Recognition | ❌ | ✅ | ✅ |
 | View Analytics | Own Only | All | All |
 | Create Assignments | ❌ | ✅ | ✅ |
 | Submit Assignments | ✅ | ❌ | ❌ |
@@ -566,7 +539,6 @@ Password Storage (Demo):
 
 | Service | Purpose |
 |---------|---------|
-| TensorFlow.js | Face recognition model |
 | Recharts | Analytics charts |
 | QRCode.react | Letter verification codes |
 | Framer Motion | UI animations |
@@ -598,7 +570,7 @@ Password Storage (Demo):
 2. Click "Admin Login"
 3. Login with Email/Password
 4. View Analytics Dashboard
-5. Mark Attendance (Manual/Face/QR)
+5. Mark Attendance (Manual)
 6. Create/Manage Assignments
 7. Modify Timetable
 8. Send Alerts (HOD only)
