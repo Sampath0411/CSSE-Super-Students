@@ -15,6 +15,7 @@ import {
   Bell,
   BookOpen,
   CheckCircle2,
+  Radio,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -34,6 +35,12 @@ const navItems = [
     href: "/faculty/attendance",
     icon: ClipboardCheck,
     description: "Mark Attendance",
+  },
+  {
+    title: "Live Session",
+    href: "/faculty/session",
+    icon: Radio,
+    description: "QR / OTP attendance",
   },
   {
     title: "Timetable",

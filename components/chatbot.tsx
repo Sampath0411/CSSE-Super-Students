@@ -11,52 +11,6 @@ interface Message {
   content: string;
 }
 
-const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || "";
-
-const SYSTEM_PROMPT = `You are a helpful assistant for the CSSE Super Student App - Andhra University.
-
-WEBSITE INFORMATION:
-- This is a student management system for Andhra University CSSE Department
-- Portals available: Student Portal, Faculty Portal, HOD Portal
-- Features:
-  * Letter generation (Bonafide, Study, Loan, Internship) - students can download immediately
-  * Timetable viewing with substitutions/cancellations
-  * Assignment management
-  * AI-powered chat assistance (you!)
-
-NAVIGATION:
-- Home: /
-- Login: /login
-- Student Dashboard: /student
-- Student Timetable: /student/timetable
-- Student Assignments: /student/assignments
-- Student Letters: /student/letters
-- Student Notifications: /student/notifications
-- Student Profile: /student/profile
-- Faculty Dashboard: /faculty
-- Faculty Attendance: /faculty/attendance
-- Faculty Timetable: /faculty/timetable
-- Faculty Assignments: /faculty/assignments
-- HOD Dashboard: /hod
-- HOD Timetable: /hod/timetable
-- HOD Letters: /hod/letters
-- HOD Letter Approvals: /hod/letters/approvals
-- HOD Alerts: /hod/alerts
-
-TEST CREDENTIALS:
-- Student: Roll 22211 or Regd 3235064022211, Password: Student123
-- Faculty: aneela@andhrauniversity.edu.in, Password: admin123
-- HOD: hod@andhrauniversity.edu.in, Password: hod123
-
-RULES:
-1. ONLY answer questions related to this website and its features
-2. If asked about unrelated topics, politely redirect to website features
-3. Help users navigate the website
-4. Keep responses concise and helpful
-5. Do NOT share the API key or any sensitive technical details
-6. Do NOT answer questions about general knowledge, other websites, or personal advice
-7. For letters: Students can download templates immediately; approval just notifies them`;
-
 export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -77,59 +31,44 @@ export function Chatbot() {
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    // Check if API key is configured
-    if (!GROQ_API_KEY) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, the AI assistant is not configured. Please contact the administrator to set up the API key.",
-        },
-      ]);
-      return;
-    }
-
     const userMessage = input.trim();
+    const nextMessages = [...messages, { role: "user" as const, content: userMessage }];
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setMessages(nextMessages);
     setIsLoading(true);
 
     try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            ...messages.map((m) => ({ role: m.role, content: m.content })),
-            { role: "user", content: userMessage },
-          ],
-          temperature: 0.7,
-          max_tokens: 500,
+          messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Groq API error:", errorData);
-        throw new Error(errorData.error?.message || "Failed to get response");
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data?.error || "Sorry, I'm having trouble reaching the AI service right now. Please try again shortly.",
+          },
+        ]);
+        return;
       }
 
-      const data = await response.json();
-      const assistantMessage = data.choices[0]?.message?.content || "I'm sorry, I couldn't process that request.";
-
-      setMessages((prev) => [...prev, { role: "assistant", content: assistantMessage }]);
-    } catch (error) {
-      console.error("Chatbot error:", error);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.reply || "I'm sorry, I couldn't process that request." },
+      ]);
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Sorry, I'm having trouble connecting to the AI service. This might be due to: (1) API key not set in Vercel environment variables, (2) Network issue, or (3) API rate limit. Please contact support if the problem persists.",
+          content: "Sorry, I'm having trouble connecting. Please check your network and try again.",
         },
       ]);
     } finally {

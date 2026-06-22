@@ -9,10 +9,19 @@ interface PreloaderProps {
 }
 
 export function Preloader({ children }: PreloaderProps) {
-  const [isLoading, setIsLoading] = useState(true);
+  // Only show the branded intro on the very first visit of a browser session,
+  // not on every client-side navigation.
+  const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && sessionStorage.getItem("introShown")) {
+      return;
+    }
+    setIsLoading(true);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("introShown", "1");
+    }
     const timer = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {

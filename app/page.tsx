@@ -1,20 +1,26 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { CountUp } from "@/components/count-up";
+import { students, subjects, calculateStudentAttendance, ATTENDANCE_THRESHOLD } from "@/lib/data";
 import {
   ClipboardCheck,
   BarChart3,
   FileText,
   GraduationCap,
   Users,
-  Bell,
   ArrowRight,
   CheckCircle,
   Calendar,
   LogIn,
   UserCog,
   Shield,
+  BookOpen,
 } from "lucide-react";
 
 const highlights = [
@@ -27,321 +33,285 @@ const highlights = [
   "Exam eligibility tracking based on attendance percentage",
 ];
 
+const reveal = {
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-80px" },
+  transition: { duration: 0.5, ease: "easeOut" },
+} as const;
+
 export default function HomePage() {
+  const avgAttendance = Math.round(
+    students.reduce((acc, s) => acc + calculateStudentAttendance(s.id).percentage, 0) / students.length
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
+      {/* Sticky Navbar */}
+      <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-lg">
+        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="relative w-9 h-9 rounded-lg bg-white shadow-sm p-1">
+              <Image src="/au-logo.png" alt="AU" fill className="object-contain p-0.5" />
+            </div>
+            <div className="leading-tight">
+              <p className="font-bold text-sm text-foreground">CSSE Super Student</p>
+              <p className="text-[10px] text-muted-foreground">Andhra University</p>
+            </div>
+          </Link>
+          <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
+            <a href="#portals" className="hover:text-foreground transition-colors">Portals</a>
+            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
+            <a href="#credentials" className="hover:text-foreground transition-colors">Demo Logins</a>
+          </nav>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button asChild size="sm">
+              <Link href="/login">
+                <LogIn className="h-4 w-4 mr-1.5" />
+                Login
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
-        <div className="container mx-auto px-6 py-16 lg:py-24 relative">
-          <div className="max-w-3xl mx-auto text-center">
+        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute -bottom-32 -left-24 w-96 h-96 rounded-full bg-accent/5 blur-3xl" />
+        <div className="container mx-auto px-6 py-20 lg:py-28 relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="max-w-3xl mx-auto text-center"
+          >
             <div className="flex justify-center mb-6">
-              <div className="relative w-28 h-28 rounded-full bg-white shadow-lg p-2">
-                <Image
-                  src="/au-logo.png"
-                  alt="Andhra University Logo"
-                  fill
-                  className="object-contain rounded-full p-1"
-                  priority
-                />
+              <div className="relative w-24 h-24 rounded-full bg-white shadow-lg p-2">
+                <Image src="/au-logo.png" alt="Andhra University Logo" fill className="object-contain rounded-full p-1" priority />
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
               <GraduationCap className="h-4 w-4" />
-              Andhra University - CSSE Department
+              Department of Computer Science &amp; Systems Engineering
             </div>
-            <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-6 text-balance">
-              CSSE Super Student App
+            <h1 className="text-4xl lg:text-6xl font-bold text-foreground mb-6 text-balance tracking-tight">
+              Attendance, letters &amp; academics —{" "}
+              <span className="text-primary">one student portal</span>
             </h1>
-            <p className="text-lg text-muted-foreground mb-8 text-pretty">
-              A 360-degree tool for teachers and administrators to manage attendance, track compliance with campus rules,
-              and instantly generate official student documentation.
+            <p className="text-lg text-muted-foreground mb-8 text-pretty max-w-2xl mx-auto">
+              A 360° platform for students, faculty, and the HOD to manage attendance, track exam
+              eligibility, run live anti-proxy sessions, and generate official documents.
             </p>
-          </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button asChild size="lg">
+                <Link href="/login">
+                  Get Started
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <a href="#features">Explore Features</a>
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* Stats band */}
+          <motion.div
+            {...reveal}
+            className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto"
+          >
+            {[
+              { icon: Users, value: students.length, suffix: "", label: "Students", color: "text-primary" },
+              { icon: BookOpen, value: subjects.length, suffix: "", label: "Subjects", color: "text-accent" },
+              { icon: BarChart3, value: avgAttendance, suffix: "%", label: "Avg Attendance", color: "text-success" },
+              { icon: Shield, value: ATTENDANCE_THRESHOLD, suffix: "%", label: "Min Required", color: "text-warning" },
+            ].map((stat) => (
+              <Card key={stat.label} className="text-center">
+                <CardContent className="pt-6">
+                  <stat.icon className={`h-7 w-7 mx-auto mb-2 ${stat.color}`} />
+                  <p className="text-3xl font-bold text-foreground">
+                    <CountUp end={stat.value} suffix={stat.suffix} />
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      {/* Login Cards Section */}
-      <section className="py-16 bg-muted/30">
+      {/* Portals */}
+      <section id="portals" className="py-20 bg-muted/30">
         <div className="container mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">Choose Your Portal</h2>
+          <motion.div {...reveal} className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-foreground mb-3">Choose Your Portal</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Select your role to access the appropriate features and functionality.
+              Each role gets a tailored experience with the right tools and permissions.
             </p>
-          </div>
-          
-          {/* Portal Cards */}
-          <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6 mb-12">
-            {/* Student Portal Card */}
-            <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16" />
-              <CardHeader className="pb-2">
-                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                  <GraduationCap className="h-7 w-7 text-primary" />
-                </div>
-                <CardTitle className="text-xl">Student Portal</CardTitle>
-                <CardDescription>
-                  View your attendance, check assignments, and track your academic progress.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
-                    View attendance history
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
-                    View assignments & timetable
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
-                    Check exam eligibility
-                  </li>
-                </ul>
-                <Button asChild className="w-full">
-                  <Link href="/login">
-                    <GraduationCap className="h-4 w-4 mr-2" />
-                    Student Login
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  Login with Registration/Roll Number
-                </p>
-              </CardContent>
-            </Card>
+          </motion.div>
 
-            {/* Faculty Portal Card */}
-            <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full -mr-16 -mt-16" />
-              <CardHeader className="pb-2">
-                <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center mb-4">
-                  <UserCog className="h-7 w-7 text-accent" />
-                </div>
-                <CardTitle className="text-xl">Faculty Portal</CardTitle>
-                <CardDescription>
-                  Mark attendance, manage assignments, view timetables and create student letters.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
-                    Mark student attendance
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
-                    Edit timetables & substitutions
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
-                    Create certificates/letters
-                  </li>
-                </ul>
-                <Button asChild variant="secondary" className="w-full">
-                  <Link href="/login">
-                    <UserCog className="h-4 w-4 mr-2" />
-                    Faculty Login
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  Login with University Email
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* HOD Portal Card */}
-            <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-warning/10 rounded-full -mr-16 -mt-16" />
-              <CardHeader className="pb-2">
-                <div className="w-14 h-14 rounded-xl bg-warning/10 flex items-center justify-center mb-4">
-                  <Shield className="h-7 w-7 text-warning" />
-                </div>
-                <CardTitle className="text-xl">HOD Portal</CardTitle>
-                <CardDescription>
-                  Oversee department operations, manage timetables, approve letters and view reports.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
-                    Manage timetables
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
-                    Approve student letters
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-success" />
-                    Send attendance alerts
-                  </li>
-                </ul>
-                <Button asChild variant="outline" className="w-full border-warning text-warning hover:bg-warning hover:text-warning-foreground">
-                  <Link href="/login">
-                    <Shield className="h-4 w-4 mr-2" />
-                    HOD Login
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  Login with HOD Email
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Feature Cards */}
-          <div className="text-center mb-8">
-            <h3 className="text-xl font-semibold text-foreground mb-2">Core Features</h3>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
-            <Card className="text-center p-4">
-              <ClipboardCheck className="h-8 w-8 text-primary mx-auto mb-2" />
-              <p className="font-medium text-sm">Digital Register</p>
-              <p className="text-xs text-muted-foreground">Mark attendance quickly</p>
-            </Card>
-            <Card className="text-center p-4">
-              <BarChart3 className="h-8 w-8 text-success mx-auto mb-2" />
-              <p className="font-medium text-sm">Analytics Dashboard</p>
-              <p className="text-xs text-muted-foreground">View reports & trends</p>
-            </Card>
-            <Card className="text-center p-4">
-              <Calendar className="h-8 w-8 text-warning mx-auto mb-2" />
-              <p className="font-medium text-sm">Smart Timetable</p>
-              <p className="text-xs text-muted-foreground">Cancellations & substitutes</p>
-            </Card>
-            <Card className="text-center p-4">
-              <FileText className="h-8 w-8 text-accent mx-auto mb-2" />
-              <p className="font-medium text-sm">Letter Generator</p>
-              <p className="text-xs text-muted-foreground">Official documents</p>
-            </Card>
+          <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: GraduationCap, title: "Student Portal",
+                blob: "bg-primary/5", iconWrap: "bg-primary/10", iconColor: "text-primary",
+                desc: "Track attendance, exam eligibility, assignments, and request letters.",
+                bullets: ["View attendance & eligibility", "Assignments & timetable", "Request official letters"],
+                variant: "default" as const, note: "Login with Registration/Roll Number",
+              },
+              {
+                icon: UserCog, title: "Faculty Portal",
+                blob: "bg-accent/5", iconWrap: "bg-accent/10", iconColor: "text-accent",
+                desc: "Mark attendance, run live sessions, manage assignments and timetables.",
+                bullets: ["Mark attendance & live sessions", "Edit timetables & substitutions", "Create & manage assignments"],
+                variant: "secondary" as const, note: "Login with University Email",
+              },
+              {
+                icon: Shield, title: "HOD Portal",
+                blob: "bg-warning/10", iconWrap: "bg-warning/10", iconColor: "text-warning",
+                desc: "Oversee the department, approve letters, and send attendance alerts.",
+                bullets: ["Department-wide analytics", "Approve student letters", "Send attendance alerts"],
+                variant: "outline" as const, note: "Login with HOD Email",
+              },
+            ].map((portal) => (
+              <motion.div key={portal.title} {...reveal}>
+                <Card className="relative overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
+                  <div className={`absolute top-0 right-0 w-32 h-32 ${portal.blob} rounded-full -mr-16 -mt-16`} />
+                  <CardHeader className="pb-2">
+                    <div className={`w-14 h-14 rounded-xl ${portal.iconWrap} flex items-center justify-center mb-4`}>
+                      <portal.icon className={`h-7 w-7 ${portal.iconColor}`} />
+                    </div>
+                    <CardTitle className="text-xl">{portal.title}</CardTitle>
+                    <CardDescription>{portal.desc}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 flex-1 flex flex-col">
+                    <ul className="space-y-2 text-sm text-muted-foreground flex-1">
+                      {portal.bullets.map((b) => (
+                        <li key={b} className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-success shrink-0" />
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button asChild variant={portal.variant} className="w-full">
+                      <Link href="/login">
+                        Enter Portal
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Link>
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">{portal.note}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Highlights Section */}
-      <section className="py-16">
+      {/* Features */}
+      <section id="features" className="py-20">
         <div className="container mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-foreground mb-6">Key Highlights</h2>
+            <motion.div {...reveal}>
+              <h2 className="text-3xl font-bold text-foreground mb-6">Everything in one place</h2>
               <p className="text-muted-foreground mb-8">
-                Designed specifically for Andhra University faculty and staff, this application streamlines 
-                daily administrative tasks and provides powerful insights into student attendance patterns.
+                Built specifically for the CSSE department to streamline daily academic operations
+                and give clear insight into attendance patterns.
               </p>
               <ul className="space-y-4">
-                {highlights.map((highlight, index) => (
-                  <li key={index} className="flex items-start gap-3">
+                {highlights.map((h) => (
+                  <li key={h} className="flex items-start gap-3">
                     <CheckCircle className="h-5 w-5 text-success mt-0.5 shrink-0" />
-                    <span className="text-foreground">{highlight}</span>
+                    <span className="text-foreground">{h}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <Users className="h-8 w-8 text-primary mb-2" />
-                  <p className="text-3xl font-bold text-foreground">32</p>
-                  <p className="text-sm text-muted-foreground">Real Students</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <ClipboardCheck className="h-8 w-8 text-success mb-2" />
-                  <p className="text-3xl font-bold text-foreground">9</p>
-                  <p className="text-sm text-muted-foreground">Subjects Tracked</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <FileText className="h-8 w-8 text-accent mb-2" />
-                  <p className="text-3xl font-bold text-foreground">4</p>
-                  <p className="text-sm text-muted-foreground">Letter Templates</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <Bell className="h-8 w-8 text-warning mb-2" />
-                  <p className="text-3xl font-bold text-foreground">75%</p>
-                  <p className="text-sm text-muted-foreground">Min Attendance</p>
-                </CardContent>
-              </Card>
-            </div>
+            </motion.div>
+            <motion.div {...reveal} className="grid grid-cols-2 gap-4">
+              {[
+                { icon: ClipboardCheck, color: "text-primary", title: "Digital Register", sub: "Mark attendance fast" },
+                { icon: BarChart3, color: "text-success", title: "Analytics", sub: "Reports & trends" },
+                { icon: Calendar, color: "text-warning", title: "Smart Timetable", sub: "Cancellations & substitutes" },
+                { icon: FileText, color: "text-accent", title: "Letter Generator", sub: "Official documents" },
+              ].map((f) => (
+                <Card key={f.title} className="text-center p-5 hover:shadow-lg transition-shadow">
+                  <f.icon className={`h-8 w-8 mx-auto mb-2 ${f.color}`} />
+                  <p className="font-medium text-sm">{f.title}</p>
+                  <p className="text-xs text-muted-foreground">{f.sub}</p>
+                </Card>
+              ))}
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Test Credentials Section */}
-      <section className="py-12 bg-muted/30">
+      {/* Credentials */}
+      <section id="credentials" className="py-16 bg-muted/30">
         <div className="container mx-auto px-6">
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader className="text-center">
-              <CardTitle>Test Credentials</CardTitle>
-              <CardDescription>Use these credentials to explore the application</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <p className="font-semibold text-sm flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4 text-primary" />
-                    Student Login
-                  </p>
-                  <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
-                    <p><span className="text-muted-foreground">Roll:</span> <code className="bg-background px-1.5 py-0.5 rounded">22211</code></p>
-                    <p><span className="text-muted-foreground">Pass:</span> <code className="bg-background px-1.5 py-0.5 rounded">Student123</code></p>
+          <motion.div {...reveal}>
+            <Card className="max-w-2xl mx-auto">
+              <CardHeader className="text-center">
+                <CardTitle>Test Credentials</CardTitle>
+                <CardDescription>Use these to explore each portal</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <p className="font-semibold text-sm flex items-center gap-2">
+                      <GraduationCap className="h-4 w-4 text-primary" /> Student
+                    </p>
+                    <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+                      <p><span className="text-muted-foreground">Roll:</span> <code className="bg-background px-1.5 py-0.5 rounded">22211</code></p>
+                      <p><span className="text-muted-foreground">Pass:</span> <code className="bg-background px-1.5 py-0.5 rounded">Student123</code></p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-semibold text-sm flex items-center gap-2">
+                      <UserCog className="h-4 w-4 text-accent" /> Faculty
+                    </p>
+                    <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+                      <p><span className="text-muted-foreground">Email:</span> <code className="bg-background px-1.5 py-0.5 rounded text-xs">aneela@andhrauniversity.edu.in</code></p>
+                      <p><span className="text-muted-foreground">Pass:</span> <code className="bg-background px-1.5 py-0.5 rounded">admin123</code></p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-semibold text-sm flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-warning" /> HOD
+                    </p>
+                    <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+                      <p><span className="text-muted-foreground">Email:</span> <code className="bg-background px-1.5 py-0.5 rounded text-xs">hod@andhrauniversity.edu.in</code></p>
+                      <p><span className="text-muted-foreground">Pass:</span> <code className="bg-background px-1.5 py-0.5 rounded">hod123</code></p>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <p className="font-semibold text-sm flex items-center gap-2">
-                    <UserCog className="h-4 w-4 text-accent" />
-                    Faculty Login
-                  </p>
-                  <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
-                    <p><span className="text-muted-foreground">Email:</span> <code className="bg-background px-1.5 py-0.5 rounded text-xs">aneela@andhrauniversity.edu.in</code></p>
-                    <p><span className="text-muted-foreground">Pass:</span> <code className="bg-background px-1.5 py-0.5 rounded">admin123</code></p>
-                  </div>
+                <div className="mt-6 text-center">
+                  <Button asChild size="lg">
+                    <Link href="/login">
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Go to Login
+                    </Link>
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <p className="font-semibold text-sm flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-warning" />
-                    HOD Login
-                  </p>
-                  <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
-                    <p><span className="text-muted-foreground">Email:</span> <code className="bg-background px-1.5 py-0.5 rounded text-xs">hod@andhrauniversity.edu.in</code></p>
-                    <p><span className="text-muted-foreground">Pass:</span> <code className="bg-background px-1.5 py-0.5 rounded">hod123</code></p>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-6 text-center">
-                <Button asChild size="lg">
-                  <Link href="/login">
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Go to Login Page
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-border">
+      <footer className="py-10 border-t border-border">
         <div className="container mx-auto px-6 text-center text-muted-foreground">
-          <p className="mb-2">
-            <span className="font-semibold text-foreground">CSSE Super Student App</span> - Andhra University
-          </p>
-          <p className="text-sm">
-            Department of Computer Science and Systems Engineering, Visakhapatnam
-          </p>
-          <p className="text-xs mt-2">
-            Class: 3/6 BTECH (CSE)-4, II Semester | Room A33 | W.E.F. 19-01-2026
-          </p>
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <div className="relative w-8 h-8 rounded-lg bg-white shadow-sm p-1">
+              <Image src="/au-logo.png" alt="AU" fill className="object-contain p-0.5" />
+            </div>
+            <span className="font-semibold text-foreground">CSSE Super Student App</span>
+          </div>
+          <p className="text-sm">Department of Computer Science and Systems Engineering, Visakhapatnam</p>
+          <p className="text-xs mt-2">Class: 3/6 BTECH (CSE)-4, II Semester | Room A33 | W.E.F. 19-01-2026</p>
         </div>
       </footer>
     </div>

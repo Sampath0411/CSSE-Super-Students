@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   CheckCircle,
   ArrowRight,
+  QrCode,
 } from "lucide-react";
 import {
   type Student,
@@ -25,6 +26,8 @@ import {
   calculateStudentAttendance,
   ATTENDANCE_THRESHOLD,
 } from "@/lib/data";
+import { AttendanceRing } from "@/components/attendance-ring";
+import { forecastAttendance } from "@/lib/attendance-utils";
 
 // Convert a numeric year into an ordinal label (1 -> "1st", 3 -> "3rd")
 function getYearLabel(year: number): string {
@@ -116,6 +119,7 @@ export default function StudentDashboardPage() {
     (s) => s.percentage < ATTENDANCE_THRESHOLD
   );
   const isEligible = overallAttendance.percentage >= ATTENDANCE_THRESHOLD;
+  const forecast = forecastAttendance(overallAttendance.present, overallAttendance.total);
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
@@ -130,8 +134,49 @@ export default function StudentDashboardPage() {
               {student.course} - {getYearLabel(student.year)} Year, Semester {student.semester}
             </p>
           </div>
+          <Button asChild size="lg" variant="secondary">
+            <Link href="/student/verify-attendance">
+              <QrCode className="h-5 w-5 mr-2" />
+              Mark Attendance
+            </Link>
+          </Button>
         </div>
       </div>
+
+      {/* Attendance Summary with Ring */}
+      <Card className="overflow-hidden">
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <AttendanceRing percentage={overallAttendance.percentage} />
+            <div className="flex-1 text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                <Badge variant={isEligible ? "default" : "destructive"}>
+                  {isEligible ? "Exam Eligible" : "At Risk"}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {overallAttendance.present}/{overallAttendance.total} classes attended
+                </span>
+              </div>
+              {isEligible ? (
+                <p className="text-foreground">
+                  You&apos;re above the {ATTENDANCE_THRESHOLD}% mark. You can still miss{" "}
+                  <span className="font-bold text-success">{forecast.canMiss}</span>{" "}
+                  more {forecast.canMiss === 1 ? "class" : "classes"} and stay eligible.
+                </p>
+              ) : (
+                <p className="text-foreground">
+                  You&apos;re below {ATTENDANCE_THRESHOLD}%. Attend the next{" "}
+                  <span className="font-bold text-destructive">{forecast.mustAttend}</span>{" "}
+                  {forecast.mustAttend === 1 ? "class" : "classes"} in a row to get back on track.
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Minimum {ATTENDANCE_THRESHOLD}% required for exam eligibility.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

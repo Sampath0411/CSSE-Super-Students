@@ -15,6 +15,8 @@ import {
   getSubjectById,
 } from "@/lib/data";
 import { addAlertLog } from "@/lib/attendance-store";
+import { exportToCSV } from "@/lib/export";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,6 +33,7 @@ import {
   MessageSquare,
   BarChart3,
   PieChart,
+  Download,
 } from "lucide-react";
 import {
   BarChart,
@@ -175,7 +178,29 @@ export default function DashboardPage() {
       parentContact: type === "sms" ? student.parentPhone : `${student.name.toLowerCase().replace(" ", ".")}@parent.com`,
     });
 
-    alert(`${type.toUpperCase()} alert sent for ${student.name}`);
+    toast.success(`${type.toUpperCase()} alert sent`, {
+      description: `Notified the parent of ${student.name} (${attendance.percentage}% attendance).`,
+    });
+  };
+
+  const handleExportAbsentees = () => {
+    if (chronicAbsenteesList.length === 0) {
+      toast.info("No chronic absentees to export.");
+      return;
+    }
+    exportToCSV(
+      `chronic-absentees-${selectedDate}`,
+      chronicAbsenteesList.map(({ student, attendance }) => ({
+        RollNumber: student.rollNumber,
+        Name: student.name,
+        AttendancePercent: attendance.percentage,
+        Present: attendance.present,
+        Total: attendance.total,
+        ParentPhone: student.parentPhone,
+        Email: student.email,
+      }))
+    );
+    toast.success("Exported chronic absentees to CSV");
   };
 
   return (
@@ -491,13 +516,21 @@ export default function DashboardPage() {
           <TabsContent value="semester" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                  Chronic Absentees - Exam Eligibility at Risk
-                </CardTitle>
-                <CardDescription>
-                  Students with attendance below {ATTENDANCE_THRESHOLD}% - Not eligible for exams without condonation
-                </CardDescription>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      Chronic Absentees - Exam Eligibility at Risk
+                    </CardTitle>
+                    <CardDescription>
+                      Students with attendance below {ATTENDANCE_THRESHOLD}% - Not eligible for exams without condonation
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExportAbsentees}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {chronicAbsenteesList.length > 0 ? (
