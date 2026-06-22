@@ -51,10 +51,33 @@ function VerifyAttendanceInner() {
     if (existing.sessionActive) setSession(existing);
   }, [searchParams, router]);
 
+  // If the teacher ends the session in another tab, localStorage clears and a
+  // "storage" event fires here — drop the student back to the join screen.
+  useEffect(() => {
+    const onStorage = () => {
+      const fresh = getSessionState();
+      if (!fresh.sessionActive && !done) {
+        setSession(null);
+        toast.info("The teacher ended this session.");
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [done]);
+
   // Runs the anti-proxy checks and marks the student present.
-  const markPresent = async (active: AntiProxySession) => {
-    if (!student || !active.subjectId || !active.period) {
-      toast.error("Session details are missing. Ask your teacher to restart the session.");
+  const markPresent = async () => {
+    if (!student) return;
+    // Re-read the live session at click time so an ended/expired session is blocked.
+    const active = getSessionState();
+    if (!active.sessionActive || !active.subjectId || !active.period) {
+      toast.error("This session has ended. Ask your teacher to start it again.");
+      setSession(null);
+      return;
+    }
+    if (active.otpExpiry && Date.now() > active.otpExpiry) {
+      toast.error("This session has expired.");
+      setSession(null);
       return;
     }
     setMarking(true);
@@ -104,9 +127,8 @@ function VerifyAttendanceInner() {
       toast.error(res.message);
       return;
     }
-    const active = getSessionState();
-    setSession(active);
-    await markPresent(active);
+    setSession(getSessionState());
+    await markPresent();
   };
 
   if (done) {
@@ -157,7 +179,7 @@ function VerifyAttendanceInner() {
                   <MapPin className="h-3.5 w-3.5" /> Location check required — allow location access.
                 </p>
               )}
-              <Button className="w-full" size="lg" onClick={() => markPresent(session!)} disabled={marking}>
+              <Button className="w-full" size="lg" onClick={() => markPresent()} disabled={marking}>
                 {marking ? "Verifying..." : "Mark me Present"}
               </Button>
             </>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   generateSessionCode,
   generateShareableUrl,
   storeSharedSession,
+  getSharedSession,
   clearSession,
   getStudentLocation,
   type EncodedSessionData,
@@ -30,6 +31,24 @@ export default function LiveSessionPage() {
   const [useLocation, setUseLocation] = useState(false);
   const [session, setSession] = useState<ActiveSession | null>(null);
   const [loadingLoc, setLoadingLoc] = useState(false);
+
+  // Restore a still-active session after a refresh, so reloading the page
+  // does NOT silently orphan the session for students.
+  useEffect(() => {
+    const shared = getSharedSession();
+    if (shared && shared.active) {
+      const data: EncodedSessionData = {
+        subjectId: shared.subjectId,
+        subjectName: shared.subjectName,
+        period: shared.period,
+        otp: shared.otp,
+        otpExpiry: shared.otpExpiry,
+        teacherLocation: shared.teacherLocation,
+        createdAt: shared.createdAt,
+      };
+      setSession({ ...data, sessionCode: shared.sessionCode, url: generateShareableUrl(data) });
+    }
+  }, []);
 
   const startSession = async () => {
     if (!selectedSubject || !selectedPeriod) {
