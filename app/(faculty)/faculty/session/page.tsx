@@ -38,8 +38,8 @@ export default function LiveSessionPage() {
     }
 
     const subject = subjects.find((s) => s.id === selectedSubject);
-    const otp = generateSessionCode();
-    const sessionCode = generateSessionCode();
+    // One single code: students type it OR scan the QR — both resolve to the same session.
+    const code = generateSessionCode();
     const createdAt = Date.now();
     const otpExpiry = createdAt + 30 * 60 * 1000; // 30 minutes
 
@@ -63,15 +63,15 @@ export default function LiveSessionPage() {
       subjectId: selectedSubject,
       subjectName: subject?.name || "",
       period: parseInt(selectedPeriod),
-      otp,
+      otp: code,
       otpExpiry,
       teacherLocation,
       createdAt,
     };
 
-    storeSharedSession(sessionCode, sessionData);
+    storeSharedSession(code, sessionData);
     const url = generateShareableUrl(sessionData);
-    setSession({ ...sessionData, sessionCode, url });
+    setSession({ ...sessionData, sessionCode: code, url });
     toast.success("Live session started.");
   };
 
@@ -169,17 +169,17 @@ export default function LiveSessionPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <KeyRound className="h-5 w-5" /> Manual codes
+                <KeyRound className="h-5 w-5" /> Class Code
               </CardTitle>
-              <CardDescription>For students who can&apos;t scan the QR.</CardDescription>
+              <CardDescription>Read this code out — students type it to mark present.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-primary/10 border border-primary/20">
                 <div>
-                  <p className="text-sm text-muted-foreground">One-Time Password (OTP)</p>
-                  <p className="text-3xl font-bold font-mono tracking-widest text-foreground">{session.otp}</p>
+                  <p className="text-sm text-muted-foreground">Code</p>
+                  <p className="text-4xl font-bold font-mono tracking-[0.3em] text-primary">{session.otp}</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => copy(session.otp || "", "OTP")}>
+                <Button variant="ghost" size="icon" onClick={() => copy(session.otp || "", "Code")}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
@@ -192,7 +192,8 @@ export default function LiveSessionPage() {
                 </Alert>
               )}
               <p className="text-xs text-muted-foreground">
-                OTP expires in 30 minutes. Students open the QR link, enter this OTP, and mark present.
+                Code expires in 30 minutes. Students can scan the QR <strong>or</strong> enter this code on
+                the same network/device.
               </p>
               <Button variant="destructive" className="w-full" onClick={stopSession}>
                 <Square className="h-4 w-4 mr-2" /> End Session

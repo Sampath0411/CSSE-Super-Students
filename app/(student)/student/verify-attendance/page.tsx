@@ -4,15 +4,13 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, CheckCircle2, MapPin, KeyRound } from "lucide-react";
+import { Shield, CheckCircle2, MapPin, QrCode, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import {
   parseSessionFromUrl,
   validateSessionCode,
-  validateOTP,
   registerFingerprint,
   getSessionState,
   getStudentLocation,
@@ -27,8 +25,7 @@ function VerifyAttendanceInner() {
   const searchParams = useSearchParams();
   const [student, setStudent] = useState<Student | null>(null);
   const [session, setSession] = useState<AntiProxySession | null>(null);
-  const [codeInput, setCodeInput] = useState("");
-  const [otpInput, setOtpInput] = useState("");
+  const [code, setCode] = useState("");
   const [marking, setMarking] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -40,57 +37,42 @@ function VerifyAttendanceInner() {
     }
     setStudent(JSON.parse(stored));
 
-    // A QR scan carries the session in the URL — load it if present.
+    // A QR scan carries the whole session in the URL — load it if present.
     if (searchParams.get("session")) {
       const result = parseSessionFromUrl();
       if (result.valid) {
         setSession(getSessionState());
-        toast.success("Session loaded from QR.");
-      } else {
-        toast.error(result.message);
+        toast.success("Session loaded from QR code.");
+        return;
       }
-    } else {
-      const existing = getSessionState();
-      if (existing.sessionActive) setSession(existing);
+      toast.error(result.message);
     }
+    const existing = getSessionState();
+    if (existing.sessionActive) setSession(existing);
   }, [searchParams, router]);
 
-  const joinByCode = () => {
-    const result = validateSessionCode(codeInput.trim());
-    if (!result.valid) {
-      toast.error(result.message);
+  // Runs the anti-proxy checks and marks the student present.
+  const markPresent = async (active: AntiProxySession) => {
+    if (!student || !active.subjectId || !active.period) {
+      toast.error("Session details are missing. Ask your teacher to restart the session.");
       return;
     }
-    setSession(getSessionState());
-    toast.success("Joined session.");
-  };
-
-  const markPresent = async () => {
-    if (!student || !session?.subjectId || !session.period) return;
     setMarking(true);
     try {
-      // 1) OTP check
-      if (session.otp) {
-        const otpRes = validateOTP(otpInput.trim());
-        if (!otpRes.valid) {
-          toast.error(otpRes.message);
-          return;
-        }
-      }
-      // 2) Anti-proxy device fingerprint
+      // Device fingerprint (stops one phone marking many students)
       const fp = registerFingerprint(student.id);
       if (!fp.success) {
         toast.error(fp.message);
         return;
       }
-      // 3) Geofence (only if the teacher enabled it)
-      if (session.teacherLocation) {
+      // Optional geofence
+      if (active.teacherLocation) {
         const loc = await getStudentLocation();
         const locRes = validateLocation(
           loc.lat,
           loc.lng,
-          session.teacherLocation.lat,
-          session.teacherLocation.lng,
+          active.teacherLocation.lat,
+          active.teacherLocation.lng,
           10
         );
         if (!locRes.valid) {
@@ -98,22 +80,33 @@ function VerifyAttendanceInner() {
           return;
         }
       }
-      // 4) Mark present
       addAttendanceRecord({
         studentId: student.id,
-        subjectId: session.subjectId,
+        subjectId: active.subjectId,
         date: new Date().toISOString().split("T")[0],
-        period: session.period,
+        period: active.period,
         status: "present",
         markedBy: "SELF_QR",
       });
       setDone(true);
-      toast.success("Attendance marked present!");
+      toast.success("You're marked present!");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not mark attendance.");
     } finally {
       setMarking(false);
     }
+  };
+
+  // Manual path: validate the typed code, then mark present in one step.
+  const submitCode = async () => {
+    const res = validateSessionCode(code.trim());
+    if (!res.valid) {
+      toast.error(res.message);
+      return;
+    }
+    const active = getSessionState();
+    setSession(active);
+    await markPresent(active);
   };
 
   if (done) {
@@ -135,64 +128,63 @@ function VerifyAttendanceInner() {
     );
   }
 
+  const isActive = !!session?.sessionActive;
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center pb-2">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
             <Shield className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle>Verify Attendance</CardTitle>
-          <CardDescription>Mark yourself present for a live class session</CardDescription>
+          <CardTitle className="text-xl">Mark Attendance</CardTitle>
+          <CardDescription>
+            {isActive ? "You're connected to a live class session" : "Enter the code your teacher is showing"}
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {session?.sessionActive ? (
+        <CardContent className="space-y-5 pt-4">
+          {isActive ? (
             <>
-              <Alert>
-                <KeyRound className="h-4 w-4" />
-                <AlertDescription>
-                  Active session: <strong>{session.subjectName}</strong> · Period {session.period}
-                </AlertDescription>
-              </Alert>
-              {session.otp && (
-                <div className="space-y-2">
-                  <Label htmlFor="otp">Enter the OTP shown by your teacher</Label>
-                  <Input
-                    id="otp"
-                    inputMode="numeric"
-                    placeholder="6-digit OTP"
-                    value={otpInput}
-                    onChange={(e) => setOtpInput(e.target.value)}
-                  />
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
+                <BookOpen className="h-5 w-5 text-primary shrink-0" />
+                <div>
+                  <p className="font-medium text-sm text-foreground">{session?.subjectName}</p>
+                  <p className="text-xs text-muted-foreground">Period {session?.period}</p>
                 </div>
-              )}
-              {session.teacherLocation && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> Location check is required for this session.
+              </div>
+              {session?.teacherLocation && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" /> Location check required — allow location access.
                 </p>
               )}
-              <Button className="w-full" onClick={markPresent} disabled={marking}>
+              <Button className="w-full" size="lg" onClick={() => markPresent(session!)} disabled={marking}>
                 {marking ? "Verifying..." : "Mark me Present"}
               </Button>
             </>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground text-center">
-                Scan the QR code shown by your teacher, or enter the 6-digit session code below.
-              </p>
-              <div className="space-y-2">
-                <Label htmlFor="code">Session Code</Label>
-                <Input
-                  id="code"
-                  inputMode="numeric"
-                  placeholder="6-digit session code"
-                  value={codeInput}
-                  onChange={(e) => setCodeInput(e.target.value)}
-                />
+              <div className="flex flex-col items-center gap-3">
+                <InputOTP maxLength={6} value={code} onChange={setCode} containerClassName="justify-center">
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} className="h-12 w-11 text-lg" />
+                    <InputOTPSlot index={1} className="h-12 w-11 text-lg" />
+                    <InputOTPSlot index={2} className="h-12 w-11 text-lg" />
+                    <InputOTPSlot index={3} className="h-12 w-11 text-lg" />
+                    <InputOTPSlot index={4} className="h-12 w-11 text-lg" />
+                    <InputOTPSlot index={5} className="h-12 w-11 text-lg" />
+                  </InputOTPGroup>
+                </InputOTP>
               </div>
-              <Button className="w-full" onClick={joinByCode} disabled={!codeInput.trim()}>
-                Join Session
+              <Button className="w-full" size="lg" onClick={submitCode} disabled={code.length < 6 || marking}>
+                {marking ? "Verifying..." : "Mark me Present"}
               </Button>
+              <Alert>
+                <QrCode className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  On a different phone? Scan the teacher&apos;s <strong>QR code</strong> instead — the typed code
+                  only works on the same device/browser as the session.
+                </AlertDescription>
+              </Alert>
               <Button variant="ghost" className="w-full" onClick={() => router.push("/student")}>
                 Back to Dashboard
               </Button>
